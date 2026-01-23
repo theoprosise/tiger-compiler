@@ -5,17 +5,25 @@ val lineNum = ErrorMsg.lineNum
 val linePos = ErrorMsg.linePos
 fun err(p1,p2) = ErrorMsg.error p1
 
+val commentCount = ref 0
+
 fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
 
 
 %% 
 digit=[0-9];
-alpha=9[A-Za-z];
-%s COMMENT
+alpha=[A-Za-z];
+id={alpha}({alpha}|{digit}|"_")*;
+%s COMMENT STRING
 
 %%
 
 \n	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
+
+<INITIAL>"/*" => (YYBEGIN COMMENT; commentCount := !commentCount +1; continue())
+<COMMENT> "/*" =>(commentCount := !commentCount + 1; continue())
+<COMMENT> "*/" => (commentCount := !commentCount -1; if !commentCount = 0 then YYBEGIN INITIAL else (); continue());
+<COMMENT> . => (continue());
 
 <INITIAL>"type" => (Tokens.TYPE(yypos, yypos+4));
 <INITIAL>"var" => (Tokens.VAR(yypos, yypos+3));
@@ -57,4 +65,6 @@ alpha=9[A-Za-z];
 <INITIAL>";" => (Tokens.SEMICOLON(yypos, yypos+1));
 <INITIAL>":" => (Tokens.COLON(yypos, yypos+1));
 <INITIAL>"," => (Tokens.COMMA(yypos, yypos+1));
+<INITIAL>{digit}+ => (Tokens.INT(valOf(Int.fromString(yytext)), yypos, yypos+size yytext));
+<INITIAL>{id} => (Tokens.ID(yytext, yypos, yypos+size yytext));
 .    => (ErrorMsg.error yypos ("illegal character " ^ yytext); continue());
