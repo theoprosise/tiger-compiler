@@ -19,19 +19,21 @@ fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
 digit=[0-9];
 alpha=[A-Za-z];
 id={alpha}({alpha}|{digit}|"_")*;
-%s COMMENT STRING ESCAPE
+%s COMMENT STRING ESCAPE;
 
 %%
 
 \n	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
+[ \t\r]+ => (continue());
 
-<INITIAL>"/*" => (YYBEGIN COMMENT; commentCount := 1; continue())
-<COMMENT>"/*" =>(commentCount := !commentCount + 1; continue())
+<INITIAL>"/*" => (YYBEGIN COMMENT; commentCount := 1; continue());
+<COMMENT>"/*" =>(commentCount := !commentCount + 1; continue());
 <COMMENT>"*/" => (commentCount := !commentCount -1; if !commentCount = 0 then YYBEGIN INITIAL else (); continue());
 <COMMENT>. => (continue());
 
 <INITIAL>"\"" => (YYBEGIN STRING; curString := ""; stringStart := yypos; continue());
 <STRING>[^"\\\n]+ => (stringAdd yytext; continue());
+<STRING>. => (stringAdd yytext; continue());
 
 <STRING>"\\" => (YYBEGIN ESCAPE; continue());
 
@@ -39,12 +41,12 @@ id={alpha}({alpha}|{digit}|"_")*;
 <ESCAPE>"t" => (stringAdd "\t"; YYBEGIN STRING; continue());
 <ESCAPE>"\"" => (stringAdd "\""; YYBEGIN STRING; continue());
 <ESCAPE>"\\" => (stringAdd "\\"; YYBEGIN STRING; continue());
-
-<ESCAPE>"^"[@A-Z[\]\\^_] => (stringAdd String.sub(yytext,1); YYBEGIN STRING; continue());
+<ESCAPE>"^"[@-_] => (stringAdd (String.str (String.sub(yytext, 1))); YYBEGIN STRING; continue());
 <ESCAPE>{digit}{3} =>  (stringAdd (String.str (Char.chr (valOf (Int.fromString yytext)))); YYBEGIN STRING; continue());
 <ESCAPE>[ \t\n\r\f]+"\\" => (YYBEGIN STRING; continue());
 <ESCAPE>. => (ErrorMsg.error yypos ("Illegal Escape \\" ^ yytext); YYBEGIN STRING; continue());
 
+<STRING>\n => (ErrorMsg.error yypos "Newline in string literal"; YYBEGIN INITIAL; continue());
 <STRING>"\"" =>  (YYBEGIN INITIAL; Tokens.STRING(!curString, !stringStart, yypos+1));
 
 <INITIAL>"type" => (Tokens.TYPE(yypos, yypos+4));
