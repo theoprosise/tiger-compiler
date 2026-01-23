@@ -7,6 +7,11 @@ fun err(p1,p2) = ErrorMsg.error p1
 
 val commentCount = ref 0
 
+val curString = ref ""
+val stringStart = ref 0
+fun stringAdd s = (curString := !curString ^ s)
+
+
 fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
 
 
@@ -14,16 +19,33 @@ fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
 digit=[0-9];
 alpha=[A-Za-z];
 id={alpha}({alpha}|{digit}|"_")*;
-%s COMMENT STRING
+%s COMMENT STRING ESCAPE
 
 %%
 
 \n	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
 
-<INITIAL>"/*" => (YYBEGIN COMMENT; commentCount := !commentCount +1; continue())
-<COMMENT> "/*" =>(commentCount := !commentCount + 1; continue())
-<COMMENT> "*/" => (commentCount := !commentCount -1; if !commentCount = 0 then YYBEGIN INITIAL else (); continue());
-<COMMENT> . => (continue());
+<INITIAL>"/*" => (YYBEGIN COMMENT; commentCount := 1; continue())
+<COMMENT>"/*" =>(commentCount := !commentCount + 1; continue())
+<COMMENT>"*/" => (commentCount := !commentCount -1; if !commentCount = 0 then YYBEGIN INITIAL else (); continue());
+<COMMENT>. => (continue());
+
+<INITIAL>"\"" => (YYBEGIN STRING; curString := ""; stringStart := yypos; continue());
+<STRING>[^"\\\n]+ => (stringAdd yytext; continue());
+
+<STRING>"\\" => (YYBEGIN ESCAPE; continue());
+
+<ESCAPE>"n" => (stringAdd "\n"; YYBEGIN STRING; continue());
+<ESCAPE>"t" => (stringAdd "\t"; YYBEGIN STRING; continue());
+<ESCAPE>"\"" => (stringAdd "\""; YYBEGIN STRING; continue());
+<ESCAPE>"\\" => (stringAdd "\\"; YYBEGIN STRING; continue());
+
+<ESCAPE>"^"[@A-Z[\]\\^_] => (stringAdd String.sub(yytext,1); YYBEGIN STRING; continue());
+<ESCAPE>{digit}{3} =>  (stringAdd (String.str (Char.chr (valOf (Int.fromString yytext)))); YYBEGIN STRING; continue());
+<ESCAPE>[ \t\n\r\f]+"\\" => (YYBEGIN STRING; continue());
+<ESCAPE>. => (ErrorMsg.error yypos ("Illegal Escape \\" ^ yytext); YYBEGIN STRING; continue());
+
+<STRING>"\"" =>  (YYBEGIN INITIAL; Tokens.STRING(!curString, !stringStart, yypos+1));
 
 <INITIAL>"type" => (Tokens.TYPE(yypos, yypos+4));
 <INITIAL>"var" => (Tokens.VAR(yypos, yypos+3));
@@ -67,4 +89,5 @@ id={alpha}({alpha}|{digit}|"_")*;
 <INITIAL>"," => (Tokens.COMMA(yypos, yypos+1));
 <INITIAL>{digit}+ => (Tokens.INT(valOf(Int.fromString(yytext)), yypos, yypos+size yytext));
 <INITIAL>{id} => (Tokens.ID(yytext, yypos, yypos+size yytext));
+
 .    => (ErrorMsg.error yypos ("illegal character " ^ yytext); continue());
