@@ -41,7 +41,6 @@ id={alpha}({alpha}|{digit}|"_")*;
 <ESCAPE>"t" => (stringAdd "\t"; YYBEGIN STRING; continue());
 <ESCAPE>"\"" => (stringAdd "\""; YYBEGIN STRING; continue());
 <ESCAPE>"\\" => (stringAdd "\\"; YYBEGIN STRING; continue());
-<ESCAPE>"^"[@-_] => (stringAdd (String.str (String.sub(yytext, 1))); YYBEGIN STRING; continue());
 <ESCAPE>{digit}{3} =>  (stringAdd (String.str (Char.chr (valOf (Int.fromString yytext)))); YYBEGIN STRING; continue());
 <ESCAPE>[ \t\n\r\f]+"\\" => (YYBEGIN STRING; continue());
 <ESCAPE>. => (ErrorMsg.error yypos ("Illegal Escape \\" ^ yytext); YYBEGIN STRING; continue());
