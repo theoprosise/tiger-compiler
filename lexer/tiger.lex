@@ -33,9 +33,12 @@ id={alpha}({alpha}|{digit}|"_")*;
 
 <INITIAL>"\"" => (YYBEGIN STRING; curString := ""; stringStart := yypos; continue());
 <STRING>[^"\\\n]+ => (stringAdd yytext; continue());
+<STRING>"\\" => (YYBEGIN ESCAPE; continue());
+<STRING>"\"" =>  (YYBEGIN INITIAL; Tokens.STRING(!curString, !stringStart, yypos+1));
+<STRING>\n => (ErrorMsg.error yypos "Newline in string literal"; YYBEGIN INITIAL; continue());
+
 <STRING>. => (stringAdd yytext; continue());
 
-<STRING>"\\" => (YYBEGIN ESCAPE; continue());
 
 <ESCAPE>"n" => (stringAdd "\n"; YYBEGIN STRING; continue());
 <ESCAPE>"t" => (stringAdd "\t"; YYBEGIN STRING; continue());
@@ -45,8 +48,6 @@ id={alpha}({alpha}|{digit}|"_")*;
 <ESCAPE>[ \t\n\r\f]+"\\" => (YYBEGIN STRING; continue());
 <ESCAPE>. => (ErrorMsg.error yypos ("Illegal Escape \\" ^ yytext); YYBEGIN STRING; continue());
 
-<STRING>\n => (ErrorMsg.error yypos "Newline in string literal"; YYBEGIN INITIAL; continue());
-<STRING>"\"" =>  (YYBEGIN INITIAL; Tokens.STRING(!curString, !stringStart, yypos+1));
 
 <INITIAL>"type" => (Tokens.TYPE(yypos, yypos+4));
 <INITIAL>"var" => (Tokens.VAR(yypos, yypos+3));

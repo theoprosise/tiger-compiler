@@ -195,39 +195,39 @@ fun yyAction7 (strm, lastMatch : yymatch) = let
       in
         yystrm := strm; (stringAdd yytext; continue())
       end
-fun yyAction8 (strm, lastMatch : yymatch) = let
+fun yyAction8 (strm, lastMatch : yymatch) = (yystrm := strm;
+      (YYBEGIN ESCAPE; continue()))
+fun yyAction9 (strm, lastMatch : yymatch) = (yystrm := strm;
+      (YYBEGIN INITIAL; Tokens.STRING(!curString, !stringStart, yypos+1)))
+fun yyAction10 (strm, lastMatch : yymatch) = (yystrm := strm;
+      (ErrorMsg.error yypos "Newline in string literal"; YYBEGIN INITIAL; continue()))
+fun yyAction11 (strm, lastMatch : yymatch) = let
       val yytext = yymktext(strm)
       in
         yystrm := strm; (stringAdd yytext; continue())
       end
-fun yyAction9 (strm, lastMatch : yymatch) = (yystrm := strm;
-      (YYBEGIN ESCAPE; continue()))
-fun yyAction10 (strm, lastMatch : yymatch) = (yystrm := strm;
-      (stringAdd "\n"; YYBEGIN STRING; continue()))
-fun yyAction11 (strm, lastMatch : yymatch) = (yystrm := strm;
-      (stringAdd "\t"; YYBEGIN STRING; continue()))
 fun yyAction12 (strm, lastMatch : yymatch) = (yystrm := strm;
-      (stringAdd "\""; YYBEGIN STRING; continue()))
+      (stringAdd "\n"; YYBEGIN STRING; continue()))
 fun yyAction13 (strm, lastMatch : yymatch) = (yystrm := strm;
+      (stringAdd "\t"; YYBEGIN STRING; continue()))
+fun yyAction14 (strm, lastMatch : yymatch) = (yystrm := strm;
+      (stringAdd "\""; YYBEGIN STRING; continue()))
+fun yyAction15 (strm, lastMatch : yymatch) = (yystrm := strm;
       (stringAdd "\\"; YYBEGIN STRING; continue()))
-fun yyAction14 (strm, lastMatch : yymatch) = let
+fun yyAction16 (strm, lastMatch : yymatch) = let
       val yytext = yymktext(strm)
       in
         yystrm := strm;
         (stringAdd (String.str (Char.chr (valOf (Int.fromString yytext)))); YYBEGIN STRING; continue())
       end
-fun yyAction15 (strm, lastMatch : yymatch) = (yystrm := strm;
+fun yyAction17 (strm, lastMatch : yymatch) = (yystrm := strm;
       (YYBEGIN STRING; continue()))
-fun yyAction16 (strm, lastMatch : yymatch) = let
+fun yyAction18 (strm, lastMatch : yymatch) = let
       val yytext = yymktext(strm)
       in
         yystrm := strm;
         (ErrorMsg.error yypos ("Illegal Escape \\" ^ yytext); YYBEGIN STRING; continue())
       end
-fun yyAction17 (strm, lastMatch : yymatch) = (yystrm := strm;
-      (ErrorMsg.error yypos "Newline in string literal"; YYBEGIN INITIAL; continue()))
-fun yyAction18 (strm, lastMatch : yymatch) = (yystrm := strm;
-      (YYBEGIN INITIAL; Tokens.STRING(!curString, !stringStart, yypos+1)))
 fun yyAction19 (strm, lastMatch : yymatch) = (yystrm := strm;
       (Tokens.TYPE(yypos, yypos+4)))
 fun yyAction20 (strm, lastMatch : yymatch) = (yystrm := strm;
@@ -2221,16 +2221,16 @@ fun yyQ3 (strm, lastMatch : yymatch) = (case (yygetc(strm))
               else yyQ33(strm', lastMatch)
       (* end case *))
 fun yyQ27 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction11(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction11(strm, yyNO_MATCH)
+       of NONE => yyAction13(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction13(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ26 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction10(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction10(strm, yyNO_MATCH)
+       of NONE => yyAction12(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction12(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ29 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction15(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction15(strm, yyNO_MATCH)
+       of NONE => yyAction17(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction17(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ28 (strm, lastMatch : yymatch) = (case (yygetc(strm))
        of NONE => yystuck(lastMatch)
@@ -2258,37 +2258,37 @@ fun yyQ28 (strm, lastMatch : yymatch) = (case (yygetc(strm))
               else yystuck(lastMatch)
       (* end case *))
 fun yyQ25 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction16(strm, yyNO_MATCH)
+       of NONE => yyAction18(strm, yyNO_MATCH)
         | SOME(inp, strm') =>
             if inp = #" "
-              then yyQ28(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
+              then yyQ28(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
             else if inp < #" "
               then if inp = #"\v"
-                  then yyAction16(strm, yyNO_MATCH)
+                  then yyAction18(strm, yyNO_MATCH)
                 else if inp < #"\v"
                   then if inp <= #"\b"
-                      then yyAction16(strm, yyNO_MATCH)
-                      else yyQ28(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
+                      then yyAction18(strm, yyNO_MATCH)
+                      else yyQ28(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
                 else if inp = #"\r"
-                  then yyQ28(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
-                  else yyAction16(strm, yyNO_MATCH)
+                  then yyQ28(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
+                  else yyAction18(strm, yyNO_MATCH)
             else if inp = #"]"
-              then yyAction16(strm, yyNO_MATCH)
+              then yyAction18(strm, yyNO_MATCH)
             else if inp < #"]"
               then if inp = #"\\"
-                  then yyQ29(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
-                  else yyAction16(strm, yyNO_MATCH)
+                  then yyQ29(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
+                  else yyAction18(strm, yyNO_MATCH)
             else if inp = #"f"
-              then yyQ28(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
-              else yyAction16(strm, yyNO_MATCH)
+              then yyQ28(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
+              else yyAction18(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ24 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction13(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction13(strm, yyNO_MATCH)
+       of NONE => yyAction15(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction15(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ31 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction14(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction14(strm, yyNO_MATCH)
+       of NONE => yyAction16(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction16(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ30 (strm, lastMatch : yymatch) = (case (yygetc(strm))
        of NONE => yystuck(lastMatch)
@@ -2302,19 +2302,19 @@ fun yyQ30 (strm, lastMatch : yymatch) = (case (yygetc(strm))
               else yystuck(lastMatch)
       (* end case *))
 fun yyQ23 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction16(strm, yyNO_MATCH)
+       of NONE => yyAction18(strm, yyNO_MATCH)
         | SOME(inp, strm') =>
             if inp = #"0"
-              then yyQ30(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
+              then yyQ30(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
             else if inp < #"0"
-              then yyAction16(strm, yyNO_MATCH)
+              then yyAction18(strm, yyNO_MATCH)
             else if inp <= #"9"
-              then yyQ30(strm', yyMATCH(strm, yyAction16, yyNO_MATCH))
-              else yyAction16(strm, yyNO_MATCH)
+              then yyQ30(strm', yyMATCH(strm, yyAction18, yyNO_MATCH))
+              else yyAction18(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ22 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction12(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction12(strm, yyNO_MATCH)
+       of NONE => yyAction14(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction14(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ21 (strm, lastMatch : yymatch) = (case (yygetc(strm))
        of NONE => yyAction0(strm, yyNO_MATCH)
@@ -2396,8 +2396,8 @@ fun yyQ20 (strm, lastMatch : yymatch) = (case (yygetc(strm))
               else yyAction1(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ19 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction16(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction16(strm, yyNO_MATCH)
+       of NONE => yyAction18(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction18(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ2 (strm, lastMatch : yymatch) = (case (yygetc(strm))
        of NONE =>
@@ -2525,8 +2525,8 @@ fun yyQ8 (strm, lastMatch : yymatch) = (case (yygetc(strm))
         | SOME(inp, strm') => yyAction8(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ7 (strm, lastMatch : yymatch) = (case (yygetc(strm))
-       of NONE => yyAction8(strm, yyNO_MATCH)
-        | SOME(inp, strm') => yyAction8(strm, yyNO_MATCH)
+       of NONE => yyAction9(strm, yyNO_MATCH)
+        | SOME(inp, strm') => yyAction9(strm, yyNO_MATCH)
       (* end case *))
 fun yyQ6 (strm, lastMatch : yymatch) = (case (yygetc(strm))
        of NONE => yyAction0(strm, yyNO_MATCH)
