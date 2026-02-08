@@ -1,3 +1,4 @@
+structure A = Absyn
 (* user declarations *)
 (* You can define values available in the semantic actions of the rules in the user declarations section. It is recommended that you keep the size of this section as small as possible and place large blocks of code in other modules. *)
 %%
@@ -24,7 +25,7 @@
   | FUNCTION | VAR | TYPE 
 
 (* our non-terminal symbols - add any new ones here *)
-%nonterm  exp | program
+%nonterm  exp | program of A.exp
 
 %pos int
 %verbose
