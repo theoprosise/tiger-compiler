@@ -25,7 +25,22 @@ structure A = Absyn
   | FUNCTION | VAR | TYPE 
 
 (* our non-terminal symbols - add any new ones here *)
-%nonterm  exp | program of A.exp
+%nonterm program of A.exp
+  | expr of A.exp
+  | lvalue of A.var
+  | exprList of A.exp list
+  | exprSeq of (A.exp * pos) list
+  | typeID of (A.symbol *  A.pos)
+  | fieldList of (A.symbol * A.exp * A.pos) list
+  | declarationList of A.dec list
+  | declaration of A.dec
+  | typeDeclaration of A.dec
+  | variableDeclaration of A.dec
+  | functionDeclaration of A.dec
+  | type of A.ty
+  | typeFields of A.field list
+  | typeField of A.field
+
 
 %pos int
 %verbose
@@ -65,36 +80,36 @@ The values of those symbols on the right hand side which have values are availab
 The value to which the code evaluates is used as the value of the nonterminal. The type of the value and the nonterminal must match. The value is ignored if the nonterminal has no value, but is still evaluated for side-effects. *)
 
 
-program	: expr	()
+program	: expr	(expr)
 
 	
 expr: 
-   STRING	()
-  | INT ()
-  | NIL ()
-  | lvalue ()
+   STRING	(A.StringExp(STRING, STRINGleft))
+  | INT (A.IntExp INT )
+  | NIL (A.NilExp)
+  | lvalue (A.VarExp lvalue)
   | expr BINOP expr
-  | lvalue ASSIGN expr ()
-  | ID LPAREN exprList RPAREN ()
+  | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
+  | ID LPAREN exprList RPAREN (A.CallExp{func=ID, args=exprList, pos=IDleft})
   | ID ()
-  | LPAREN exprSeq RPAREN ()
+  | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
   | typeID LBRACE fieldList RBRACE ()
   | typeID ()
   | typeID LBRACK expr RBRACK OF expr ()
-  | IF expr THEN expr ()
+  | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else=NONE, pos=IFleft})
   | IF expr THEN expr ELSE expr ()
-  | WHILE expr DO expr ()
-  | FOR ID ASSIGN expr TO expr DO expr ()
+  | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
+  | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=ID, escape=ref true, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
   | BREAK ()
-  | LET declarationList in expSeq END ()
+  | LET declarationList in expSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
 
 exprSeq: 
-  exp ()
-  | exprSeq SEMICOLON expr ()
+  expr ([(expr, exprleft)])
+  | exprSeq SEMICOLON expr (exprSeq @ [(expr, exprleft)])
 
 exprList:
-  expr ()
-  | exprList COMMA expr ()
+  expr ([expr])
+  | exprList COMMA expr (exprList @ [expr])
 
 fieldList:
   ID EQ expr
@@ -102,9 +117,9 @@ fieldList:
 
 
 lvalue: 
-  ID ()
-  | lvalue DOT ID ()
-  | lvalue LBRACK expr RBRACK ()
+  ID  (A.SimpleVar(ID, IDleft))
+  | lvalue DOT ID (A.FieldVar(lvalue, ID, IDleft))
+  | lvalue LBRACK expr RBRACK (A.SubscriptVar(lvalue, expr, LBRACKleft))
 
 declarationList: 
   declaration ()
