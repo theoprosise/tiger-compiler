@@ -29,7 +29,7 @@ structure A = Absyn
   | expr of A.exp
   | lvalue of A.var
   | exprList of A.exp list
-  | exprSeq of (A.exp * pos) list
+  | exprSeq of (A.exp * A.pos) list
   | typeID of (A.symbol *  A.pos)
   | fieldList of (A.symbol * A.exp * A.pos) list
   | declarationList of A.dec list
@@ -55,6 +55,13 @@ structure A = Absyn
 	DO OF NIL
 
 %prefer THEN ELSE LPAREN
+
+%left OR
+%left AND
+%nonassoc EQ NEQ LT LE GT GE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%right UMINUS
 
 %value ID ("bogus")
 %value INT (1)
@@ -88,20 +95,28 @@ expr:
   | INT (A.IntExp INT )
   | NIL (A.NilExp)
   | lvalue (A.VarExp lvalue)
-  | expr BINOP expr
+  | expr PLUS expr   (A.OpExp{left=expr1, oper=A.PlusOp, right=expr2, pos=PLUSleft})
+  | expr MINUS expr  (A.OpExp{left=expr1, oper=A.MinusOp, right=expr2, pos=MINUSleft})
+  | expr TIMES expr  (A.OpExp{left=expr1, oper=A.TimesOp, right=expr2, pos=TIMESleft})
+  | expr DIVIDE expr (A.OpExp{left=expr1, oper=A.DivideOp, right=expr2, pos=DIVIDEleft})
+  | expr EQ expr     (A.OpExp{left=expr1, oper=A.EqOp, right=expr2, pos=EQleft})
+  | expr NEQ expr    (A.OpExp{left=expr1, oper=A.NeqOp, right=expr2, pos=NEQleft})
+  | expr LT expr     (A.OpExp{left=expr1, oper=A.LtOp, right=expr2, pos=LTleft})
+  | expr LE expr     (A.OpExp{left=expr1, oper=A.LeOp, right=expr2, pos=LEleft})
+  | expr GT expr     (A.OpExp{left=expr1, oper=A.GtOp, right=expr2, pos=GTleft})
+  | expr GE expr     (A.OpExp{left=expr1, oper=A.GeOp, right=expr2, pos=GEleft})
   | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
   | ID LPAREN exprList RPAREN (A.CallExp{func=ID, args=exprList, pos=IDleft})
-  | ID ()
   | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
   | typeID LBRACE fieldList RBRACE ()
   | typeID ()
   | typeID LBRACK expr RBRACK OF expr ()
-  | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else=NONE, pos=IFleft})
+  | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else'=NONE, pos=IFleft})
   | IF expr THEN expr ELSE expr ()
   | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
   | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=ID, escape=ref true, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
   | BREAK ()
-  | LET declarationList in expSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
+  | LET declarationList IN expSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
 
 exprSeq: 
   expr ([(expr, exprleft)])
@@ -112,8 +127,8 @@ exprList:
   | exprList COMMA expr (exprList @ [expr])
 
 fieldList:
-  ID EQ expr
-  | fieldList COMMA ID EQ expr ()
+  ID EQ expr ([(ID, expr, IDleft)])
+  | fieldList COMMA ID EQ expr (fieldList @ [(ID, expr, IDleft)])
 
 
 lvalue: 
@@ -156,6 +171,6 @@ functionDeclaration:
   | FUNCTION ID COLON typeID EQ expr ()
 
 typeID:
-  ID ()
+  ID ((ID, IDleft))
 
 
