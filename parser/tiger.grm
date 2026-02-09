@@ -75,6 +75,12 @@ expr:
   | lvalue ()
   | expr BINOP expr
   | lvalue ASSIGN expr ()
+  | ID LPAREN exprList RPAREN ()
+  | ID ()
+  | LPAREN exprSeq RPAREN ()
+  | typeID LBRACE fieldList RBRACE ()
+  | typeID ()
+  | typeID LBRACK expr RBRACK OF expr ()
   | IF expr THEN expr ()
   | IF expr THEN expr ELSE expr ()
   | WHILE expr DO expr ()
@@ -84,18 +90,19 @@ expr:
 
 exprSeq: 
   exp ()
-  | exprSeq SEMICOLON expr
+  | exprSeq SEMICOLON expr ()
 
 exprList:
   expr ()
-  | exprList COMMA expr
+  | exprList COMMA expr ()
 
 fieldList:
   ID EQ expr
-  | fieldList COMMA ID EQ expr
+  | fieldList COMMA ID EQ expr ()
 
 
-lvalue: ID ()
+lvalue: 
+  ID ()
   | lvalue DOT ID ()
   | lvalue LBRACK expr RBRACK ()
 
@@ -129,7 +136,9 @@ variableDeclaration:
 
 functionDeclaration:
   FUNCTION ID RPAREN typeFields LPAREN EQ expr ()
-  |   FUNCTION ID RPAREN typeFields LPAREN COLON typeID EQ expr ()
+  | FUNCTION ID EQ expr ()
+  | FUNCTION ID RPAREN typeFields LPAREN COLON typeID EQ expr ()
+  | FUNCTION ID COLON typeID EQ expr ()
 
 
 
