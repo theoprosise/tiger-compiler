@@ -140,5 +140,7 @@ functionDeclaration:
   | FUNCTION ID RPAREN typeFields LPAREN COLON typeID EQ expr ()
   | FUNCTION ID COLON typeID EQ expr ()
 
+typeID:
+  ID ()
 
 
