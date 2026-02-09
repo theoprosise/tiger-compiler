@@ -65,7 +65,72 @@ The values of those symbols on the right hand side which have values are availab
 The value to which the code evaluates is used as the value of the nonterminal. The type of the value and the nonterminal must match. The value is ignored if the nonterminal has no value, but is still evaluated for side-effects. *)
 
 
-program	: exp				()
+program	: expr	()
 
 	
-exp: 			()
+expr: 
+   STRING	()
+  | INT ()
+  | NIL ()
+  | lvalue ()
+  | 
+  | expr binop expr
+  | lvalue ASSIGN expr ()
+  | IF expr THEN expr ()
+  | IF expr THEN expr ELSE expr ()
+  | WHILE expr DO expr ()
+  | FOR ID ASSIGN expr TO expr DO expr ()
+  | BREAK ()
+  | LET declarationList in expSeq END ()
+
+exprSeq: 
+  exp ()
+  | exprSeq SEMICOLON expr
+
+exprList:
+  expr ()
+  | exprList COMMA expr
+
+fieldList:
+  ID EQ expr
+  | fieldList COMMA ID EQ expr
+
+
+lvalue: ID ()
+  | lvalue DOT ID ()
+  | lvalue LBRACK expr RBRACK ()
+
+declarationList: 
+  declaration ()
+  | declarationList declaration ()
+
+declaration:
+  typeDeclaration ()
+  | variableDeclaration ()
+  | functionDeclaration ()
+
+typeDeclaration:
+  TYPE typeID EQ type
+
+type:
+  typeID
+| LBRACE typeFields RBRACE
+| ARRAY OF typeID
+
+typeFields:
+  typeField
+| typeFields COMMA typeField
+
+typeField:
+ID COLON typeID
+
+variableDeclaration:
+  VAR ID ASSIGN expr
+  | VAR ID COLON typeID ASSIGN expr
+
+functionDeclaration:
+  FUNCTION ID RPAREN typeFields LPAREN EQ expr
+  |   FUNCTION ID RPAREN typeFields LPAREN COLON typeID EQ expr
+
+
+
