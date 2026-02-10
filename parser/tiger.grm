@@ -65,6 +65,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
 %nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left TIMES DIVIDE
+%right UMINUS
 
 %value ID ("bogus")
 %value INT (1)
@@ -117,6 +118,7 @@ opExpr:
   | opExpr MINUS opExpr (A.OpExp{left=opExpr1, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
   | opExpr TIMES opExpr (A.OpExp{left=opExpr1, oper=A.TimesOp, right=opExpr2, pos=TIMESleft})
   | opExpr DIVIDE opExpr (A.OpExp{left=opExpr1, oper=A.DivideOp, right=opExpr2, pos=DIVIDEleft})
+  | MINUS opExpr %prec UMINUS (A.OpExp{left=0, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
   | opExpr EQ opExpr (A.OpExp{left=opExpr1, oper=A.EqOp, right=opExpr2, pos=EQleft})
   | opExpr NEQ opExpr (A.OpExp{left=opExpr1, oper=A.NeqOp, right=opExpr2, pos=NEQleft})
   | opExpr LT opExpr (A.OpExp{left=opExpr1, oper=A.LtOp, right=opExpr2, pos=LTleft})
