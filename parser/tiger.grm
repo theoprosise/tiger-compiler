@@ -108,6 +108,7 @@ opExpr:
   | INT (A.IntExp INT)
   | NIL (A.NilExp)
   | lvalue (A.VarExp lvalue)
+  | ID LPAREN RPAREN (A.CallExp{func=symMod ID, args=[], pos=IDleft})
   | ID LPAREN exprList RPAREN (A.CallExp{func=symMod ID, args=exprList, pos=IDleft})
   | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
   | ID LBRACE fieldList RBRACE (A.RecordExp{typ=symMod ID, fields=fieldList, pos=IDleft})
@@ -172,7 +173,9 @@ variableDeclaration:
   | VAR ID COLON ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=SOME(symMod ID1, ID1left), init=expr, pos=VARleft})
 
 functionDeclaration:
-  FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ]))
+  FUNCTION ID LPAREN RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=NONE, body=expr, pos=FUNCTIONleft}]))
+  | FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ]))
+  | FUNCTION ID LPAREN RPAREN COLON ID EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=SOME(symMod ID1, ID1left), body=expr, pos=FUNCTIONleft}]))
   | FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ expr 
   (A.FunctionDec ([{name=symMod ID, params=typeFields, result=SOME(symMod ID1, ID1left), body=expr, pos=FUNCTIONleft}]))
 
