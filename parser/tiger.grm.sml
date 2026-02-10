@@ -457,6 +457,7 @@ fn (T 0) => "EOF"
   | (T 41) => "FUNCTION"
   | (T 42) => "VAR"
   | (T 43) => "TYPE"
+  | (T 44) => "LOW"
   | _ => "bogus-term"
 local open Header in
 val errtermvalue=
@@ -466,12 +467,12 @@ fn (T 1) => MlyValue.ID(fn () => ("bogus")) |
 _ => MlyValue.VOID
 end
 val terms : term list = nil
- $$ (T 43) $$ (T 42) $$ (T 41) $$ (T 40) $$ (T 39) $$ (T 38) $$ (T 37)
- $$ (T 36) $$ (T 35) $$ (T 34) $$ (T 33) $$ (T 32) $$ (T 31) $$ (T 30)
- $$ (T 29) $$ (T 28) $$ (T 27) $$ (T 26) $$ (T 25) $$ (T 24) $$ (T 23)
- $$ (T 22) $$ (T 21) $$ (T 20) $$ (T 19) $$ (T 18) $$ (T 17) $$ (T 16)
- $$ (T 15) $$ (T 14) $$ (T 13) $$ (T 12) $$ (T 11) $$ (T 10) $$ (T 9)
- $$ (T 8) $$ (T 7) $$ (T 6) $$ (T 5) $$ (T 4) $$ (T 0)end
+ $$ (T 44) $$ (T 43) $$ (T 42) $$ (T 41) $$ (T 40) $$ (T 39) $$ (T 38)
+ $$ (T 37) $$ (T 36) $$ (T 35) $$ (T 34) $$ (T 33) $$ (T 32) $$ (T 31)
+ $$ (T 30) $$ (T 29) $$ (T 28) $$ (T 27) $$ (T 26) $$ (T 25) $$ (T 24)
+ $$ (T 23) $$ (T 22) $$ (T 21) $$ (T 20) $$ (T 19) $$ (T 18) $$ (T 17)
+ $$ (T 16) $$ (T 15) $$ (T 14) $$ (T 13) $$ (T 12) $$ (T 11) $$ (T 10)
+ $$ (T 9) $$ (T 8) $$ (T 7) $$ (T 6) $$ (T 5) $$ (T 4) $$ (T 0)end
 structure Actions =
 struct 
 exception mlyAction of int
@@ -1073,6 +1074,8 @@ ParserData.MlyValue.VOID,p1,p2))
 fun VAR (p1,p2) = Token.TOKEN (ParserData.LrTable.T 42,(
 ParserData.MlyValue.VOID,p1,p2))
 fun TYPE (p1,p2) = Token.TOKEN (ParserData.LrTable.T 43,(
+ParserData.MlyValue.VOID,p1,p2))
+fun LOW (p1,p2) = Token.TOKEN (ParserData.LrTable.T 44,(
 ParserData.MlyValue.VOID,p1,p2))
 end
 end

@@ -1,15 +1,5 @@
-12 shift/reduce conflicts
+2 shift/reduce conflicts
 
-error:  state 1: shift/reduce conflict (shift GE, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift GT, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift LE, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift LT, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift NEQ, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift EQ, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift DIVIDE, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift TIMES, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift MINUS, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift PLUS, reduce by rule 1)
 error:  state 13: shift/reduce conflict (shift LBRACK, reduce by rule 33)
 error:  state 75: shift/reduce conflict (shift ELSE, reduce by rule 3)
 
@@ -35,16 +25,6 @@ state 0:
 
 	.	error
 
-error:  state 1: shift/reduce conflict (shift GE, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift GT, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift LE, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift LT, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift NEQ, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift EQ, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift DIVIDE, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift TIMES, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift MINUS, reduce by rule 1)
-error:  state 1: shift/reduce conflict (shift PLUS, reduce by rule 1)
 
 state 1:
 

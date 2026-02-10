@@ -24,6 +24,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
   | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
+  | LOW
 
 (* our non-terminal symbols - add any new ones here *)
 %nonterm program of A.exp
@@ -57,6 +58,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
 
 %prefer THEN ELSE LPAREN
 
+%nonassoc LOW
 %nonassoc ASSIGN
 %left OR
 %left AND
@@ -92,7 +94,7 @@ program	: expr	(expr)
 
 	
 expr:
-  opExpr (opExpr)
+  opExpr %prec LOW (opExpr)
   | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
   | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else'=NONE, pos=IFleft})
   | IF expr THEN expr ELSE expr (A.IfExp{test=expr1, then'=expr2, else'=SOME expr3, pos=IFleft})
