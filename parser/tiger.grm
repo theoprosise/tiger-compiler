@@ -31,7 +31,6 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
   | lvalue of A.var
   | exprList of A.exp list
   | exprSeq of (A.exp * A.pos) list
-  | typeID of (A.symbol *  A.pos)
   | fieldList of (A.symbol * A.exp * A.pos) list
   | declarationList of A.dec list
   | declaration of A.dec
@@ -108,12 +107,8 @@ expr:
   | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
   | ID LPAREN exprList RPAREN (A.CallExp{func= symMod ID, args=exprList, pos=IDleft})
   | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
-  | typeID LBRACE fieldList RBRACE  (let val (t,tp) = typeID 
-  in A.RecordExp{typ=t, fields=fieldList, pos=tp} 
-  end)
-  | typeID LBRACK expr RBRACK OF expr (let val (t,tp) = typeID
-  in A.ArrayExp{typ=t, size=expr1, init=expr2, pos=tp}
-  end)
+  | ID LBRACE fieldList RBRACE (A.RecordExp{typ=symMod ID, fields=fieldList, pos=IDleft})
+  | ID LBRACK expr RBRACK OF expr (A.ArrayExp{typ=symMod ID, size=expr1, init=expr2, pos=IDleft})
   | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else'=NONE, pos=IFleft})
   | IF expr THEN expr ELSE expr (A.IfExp{test=expr1, then'=expr2, else'=SOME expr3, pos=IFleft})
   | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
@@ -149,38 +144,29 @@ declaration:
   | functionDeclaration (functionDeclaration)
 
 typeDeclaration:
-  TYPE typeID EQ ty (let val (n,np) = typeID
-  in A.TypeDec[{name=n, ty=ty, pos=TYPEleft}]
-  end)
+  TYPE ID EQ ty (A.TypeDec([{name=symMod ID, ty=ty, pos=TYPEleft}]))
 
 ty:
-  typeID (let val (t,tp) = typeID in A.NameTy(t,tp) end) 
-| LBRACE typeFields RBRACE  (A.RecordTy typeFields)
-| ARRAY OF typeID (let val (t,tp) = typeID in A.ArrayTy(t,tp) end)
+  ID (A.NameTy(symMod ID, IDleft))
+  | LBRACE typeFields RBRACE (A.RecordTy typeFields)
+  | ARRAY OF ID (A.ArrayTy(symMod ID, IDleft))
 
 typeFields:
   typeField ([typeField])
 | typeFields COMMA typeField (typeFields @ [typeField])
 
 typeField: 
- ID COLON typeID (let val (t,tp) = typeID
-  in {name=symMod ID, escape=ref true, typ=t, pos=IDleft}
-  end)
+ ID COLON ID ({name=symMod ID, escape=ref true, typ=symMod ID1, pos=IDleft})
+
 
 variableDeclaration:
   VAR ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=NONE, init=expr, pos=VARleft})
-  | VAR ID COLON typeID ASSIGN expr (let val (t,tp) = typeID
-  in A.VarDec{name=symMod ID, escape=ref false, typ=SOME(t,tp), init=expr, pos=VARleft}
-  end)
+  | VAR ID COLON ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=SOME(symMod ID1, ID1left), init=expr, pos=VARleft})
 
 functionDeclaration:
-  FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec[{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ])
-  | FUNCTION ID LPAREN typeFields RPAREN COLON typeID EQ expr
-  (let val (rt,rp) = typeID
-  in A.FunctionDec[{name=symMod ID, params=typeFields, result=SOME(rt,rp), body=expr, pos=FUNCTIONleft}]
-  end)
+  FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ]))
+  | FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ expr 
+  (A.FunctionDec ([{name=symMod ID, params=typeFields, result=SOME(symMod ID1, ID1left), body=expr, pos=FUNCTIONleft}]))
 
-typeID:
-  ID ((symMod ID, IDleft))
 
 

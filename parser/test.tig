@@ -1,0 +1,5 @@
+let
+  var x := 0
+in
+  x := x + 1; x
+end
