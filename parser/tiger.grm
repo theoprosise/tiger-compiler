@@ -38,7 +38,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
   | typeDeclaration of A.dec
   | variableDeclaration of A.dec
   | functionDeclaration of A.dec
-  | type of A.ty
+  | ty of A.ty
   | typeFields of A.field list
   | typeField of A.field
 
@@ -62,7 +62,6 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
 %nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left TIMES DIVIDE
-%right UMINUS
 
 %value ID ("bogus")
 %value INT (1)
@@ -150,11 +149,11 @@ declaration:
   | functionDeclaration (functionDeclaration)
 
 typeDeclaration:
-  TYPE typeID EQ type(let val (n,np) = typeID
-  in A.TypeDec[{name=n, ty=type, pos=TYPEleft}]
+  TYPE typeID EQ ty (let val (n,np) = typeID
+  in A.TypeDec[{name=n, ty=ty, pos=TYPEleft}]
   end)
 
-type:
+ty:
   typeID (let val (t,tp) = typeID in A.NameTy(t,tp) end) 
 | LBRACE typeFields RBRACE  (A.RecordTy typeFields)
 | ARRAY OF typeID (let val (t,tp) = typeID in A.ArrayTy(t,tp) end)
