@@ -1,4 +1,5 @@
 structure A = Absyn
+fun symMod (s:string) : A.symbol = Symbol.symbol s
 (* user declarations *)
 (* You can define values available in the semantic actions of the rules in the user declarations section. It is recommended that you keep the size of this section as small as possible and place large blocks of code in other modules. *)
 %%
@@ -106,17 +107,20 @@ expr:
   | expr GT expr     (A.OpExp{left=expr1, oper=A.GtOp, right=expr2, pos=GTleft})
   | expr GE expr     (A.OpExp{left=expr1, oper=A.GeOp, right=expr2, pos=GEleft})
   | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
-  | ID LPAREN exprList RPAREN (A.CallExp{func=ID, args=exprList, pos=IDleft})
+  | ID LPAREN exprList RPAREN (A.CallExp{func= symMod ID, args=exprList, pos=IDleft})
   | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
-  | typeID LBRACE fieldList RBRACE ()
-  | typeID ()
-  | typeID LBRACK expr RBRACK OF expr ()
+  | typeID LBRACE fieldList RBRACE  (let val (t,tp) = typeID 
+  in A.RecordExp{typ=t, fields=fieldList, pos=tp} 
+  end)
+  | typeID LBRACK expr RBRACK OF expr (let val (t,tp) = typeID
+  in A.ArrayExp{typ=t, size=expr1, init=expr2, pos=tp}
+  end)
   | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else'=NONE, pos=IFleft})
-  | IF expr THEN expr ELSE expr ()
+  | IF expr THEN expr ELSE expr (A.IfExp{test=expr1, then'=expr2, else'=SOME expr3, pos=IFleft})
   | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
-  | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=ID, escape=ref true, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
-  | BREAK ()
-  | LET declarationList IN expSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
+  | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=symMod ID, escape=ref true, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
+  | BREAK (A.BreakExp BREAKleft)
+  | LET declarationList IN exprSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
 
 exprSeq: 
   expr ([(expr, exprleft)])
@@ -127,26 +131,26 @@ exprList:
   | exprList COMMA expr (exprList @ [expr])
 
 fieldList:
-  ID EQ expr ([(ID, expr, IDleft)])
-  | fieldList COMMA ID EQ expr (fieldList @ [(ID, expr, IDleft)])
+  ID EQ expr ([(symMod ID, expr, IDleft)])
+  | fieldList COMMA ID EQ expr (fieldList @ [(symMod ID, expr, IDleft)])
 
 
 lvalue: 
-  ID  (A.SimpleVar(ID, IDleft))
-  | lvalue DOT ID (A.FieldVar(lvalue, ID, IDleft))
+  ID  (A.SimpleVar(symMod ID, IDleft))
+  | lvalue DOT ID (A.FieldVar(lvalue, symMod ID, IDleft))
   | lvalue LBRACK expr RBRACK (A.SubscriptVar(lvalue, expr, LBRACKleft))
 
 declarationList: 
-  declaration ()
-  | declarationList declaration ()
+  ([])
+  | declarationList declaration (declarationList @ [declaration])
 
 declaration:
-  typeDeclaration ()
-  | variableDeclaration ()
-  | functionDeclaration ()
+  typeDeclaration (typeDeclaration)
+  | variableDeclaration (variableDeclaration)
+  | functionDeclaration (functionDeclaration)
 
 typeDeclaration:
-  TYPE typeID EQ type ()
+  TYPE typeID EQ type (A.TypeDec[{name=symMod ID, ty=type, pos=TYPEleft}])
 
 type:
   typeID ()
@@ -161,8 +165,10 @@ typeField:()
 ID COLON typeID ()
 
 variableDeclaration:
-  VAR ID ASSIGN expr ()
-  | VAR ID COLON typeID ASSIGN expr ()
+  VAR ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=NONE, init=expr, pos=VARleft})
+  | VAR ID COLON typeID ASSIGN expr (let val (t,tp) = typeID
+  in A.VarDec{name=symMod ID, escape=ref false, typ=SOME(t,tp), init=expr, pos=VARleft}
+  end)
 
 functionDeclaration:
   FUNCTION ID RPAREN typeFields LPAREN EQ expr ()
@@ -171,6 +177,6 @@ functionDeclaration:
   | FUNCTION ID COLON typeID EQ expr ()
 
 typeID:
-  ID ((ID, IDleft))
+  ID ((symMod ID, IDleft))
 
 
