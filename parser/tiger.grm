@@ -150,19 +150,23 @@ declaration:
   | functionDeclaration (functionDeclaration)
 
 typeDeclaration:
-  TYPE typeID EQ type (A.TypeDec[{name=symMod ID, ty=type, pos=TYPEleft}])
+  TYPE typeID EQ type(let val (n,np) = typeID
+  in A.TypeDec[{name=n, ty=type, pos=TYPEleft}]
+  end)
 
 type:
-  typeID ()
-| LBRACE typeFields RBRACE ()
-| ARRAY OF typeID ()
+  typeID (let val (t,tp) = typeID in A.NameTy(t,tp) end) 
+| LBRACE typeFields RBRACE  (A.RecordTy typeFields)
+| ARRAY OF typeID (let val (t,tp) = typeID in A.ArrayTy(t,tp) end)
 
 typeFields:
-  typeField ()
-| typeFields COMMA typeField ()
+  typeField ([typeField])
+| typeFields COMMA typeField (typeFields @ [typeField])
 
-typeField:()
-ID COLON typeID ()
+typeField: 
+ ID COLON typeID (let val (t,tp) = typeID
+  in {name=symMod ID, escape=ref true, typ=t, pos=IDleft}
+  end)
 
 variableDeclaration:
   VAR ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=NONE, init=expr, pos=VARleft})
@@ -171,10 +175,11 @@ variableDeclaration:
   end)
 
 functionDeclaration:
-  FUNCTION ID RPAREN typeFields LPAREN EQ expr ()
-  | FUNCTION ID EQ expr ()
-  | FUNCTION ID RPAREN typeFields LPAREN COLON typeID EQ expr ()
-  | FUNCTION ID COLON typeID EQ expr ()
+  FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec[{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ])
+  | FUNCTION ID LPAREN typeFields RPAREN COLON typeID EQ expr
+  (let val (rt,rp) = typeID
+  in A.FunctionDec[{name=symMod ID, params=typeFields, result=SOME(rt,rp), body=expr, pos=FUNCTIONleft}]
+  end)
 
 typeID:
   ID ((symMod ID, IDleft))
