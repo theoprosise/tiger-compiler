@@ -40,6 +40,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
   | ty of A.ty
   | typeFields of A.field list
   | typeField of A.field
+  | opExpr of A.exp
 
 
 %pos int
@@ -56,6 +57,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
 
 %prefer THEN ELSE LPAREN
 
+%nonassoc ASSIGN
 %left OR
 %left AND
 %nonassoc EQ NEQ LT LE GT GE
@@ -89,32 +91,36 @@ The value to which the code evaluates is used as the value of the nonterminal. T
 program	: expr	(expr)
 
 	
-expr: 
-   STRING	(A.StringExp(STRING, STRINGleft))
-  | INT (A.IntExp INT )
-  | NIL (A.NilExp)
-  | lvalue (A.VarExp lvalue)
-  | expr PLUS expr   (A.OpExp{left=expr1, oper=A.PlusOp, right=expr2, pos=PLUSleft})
-  | expr MINUS expr  (A.OpExp{left=expr1, oper=A.MinusOp, right=expr2, pos=MINUSleft})
-  | expr TIMES expr  (A.OpExp{left=expr1, oper=A.TimesOp, right=expr2, pos=TIMESleft})
-  | expr DIVIDE expr (A.OpExp{left=expr1, oper=A.DivideOp, right=expr2, pos=DIVIDEleft})
-  | expr EQ expr     (A.OpExp{left=expr1, oper=A.EqOp, right=expr2, pos=EQleft})
-  | expr NEQ expr    (A.OpExp{left=expr1, oper=A.NeqOp, right=expr2, pos=NEQleft})
-  | expr LT expr     (A.OpExp{left=expr1, oper=A.LtOp, right=expr2, pos=LTleft})
-  | expr LE expr     (A.OpExp{left=expr1, oper=A.LeOp, right=expr2, pos=LEleft})
-  | expr GT expr     (A.OpExp{left=expr1, oper=A.GtOp, right=expr2, pos=GTleft})
-  | expr GE expr     (A.OpExp{left=expr1, oper=A.GeOp, right=expr2, pos=GEleft})
+expr:
+  opExpr (opExpr)
   | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
-  | ID LPAREN exprList RPAREN (A.CallExp{func= symMod ID, args=exprList, pos=IDleft})
-  | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
-  | ID LBRACE fieldList RBRACE (A.RecordExp{typ=symMod ID, fields=fieldList, pos=IDleft})
-  | ID LBRACK expr RBRACK OF expr (A.ArrayExp{typ=symMod ID, size=expr1, init=expr2, pos=IDleft})
   | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else'=NONE, pos=IFleft})
   | IF expr THEN expr ELSE expr (A.IfExp{test=expr1, then'=expr2, else'=SOME expr3, pos=IFleft})
   | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
-  | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=symMod ID, escape=ref true, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
+  | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=symMod ID, escape=ref false, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
   | BREAK (A.BreakExp BREAKleft)
   | LET declarationList IN exprSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
+
+opExpr:
+  STRING (A.StringExp(STRING, STRINGleft))
+  | INT (A.IntExp INT)
+  | NIL (A.NilExp)
+  | lvalue (A.VarExp lvalue)
+  | ID LPAREN exprList RPAREN (A.CallExp{func=symMod ID, args=exprList, pos=IDleft})
+  | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
+  | ID LBRACE fieldList RBRACE (A.RecordExp{typ=symMod ID, fields=fieldList, pos=IDleft})
+  | ID LBRACK expr RBRACK OF expr (A.ArrayExp{typ=symMod ID, size=expr1, init=expr2, pos=IDleft})
+  | opExpr PLUS opExpr (A.OpExp{left=opExpr1, oper=A.PlusOp, right=opExpr2, pos=PLUSleft})
+  | opExpr MINUS opExpr (A.OpExp{left=opExpr1, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
+  | opExpr TIMES opExpr (A.OpExp{left=opExpr1, oper=A.TimesOp, right=opExpr2, pos=TIMESleft})
+  | opExpr DIVIDE opExpr (A.OpExp{left=opExpr1, oper=A.DivideOp, right=opExpr2, pos=DIVIDEleft})
+  | opExpr EQ opExpr (A.OpExp{left=opExpr1, oper=A.EqOp, right=opExpr2, pos=EQleft})
+  | opExpr NEQ opExpr (A.OpExp{left=opExpr1, oper=A.NeqOp, right=opExpr2, pos=NEQleft})
+  | opExpr LT opExpr (A.OpExp{left=opExpr1, oper=A.LtOp, right=opExpr2, pos=LTleft})
+  | opExpr LE opExpr (A.OpExp{left=opExpr1, oper=A.LeOp, right=opExpr2, pos=LEleft})
+  | opExpr GT opExpr (A.OpExp{left=opExpr1, oper=A.GtOp, right=opExpr2, pos=GTleft})
+  | opExpr GE opExpr (A.OpExp{left=opExpr1, oper=A.GeOp, right=opExpr2, pos=GEleft})
+
 
 exprSeq: 
   expr ([(expr, exprleft)])
@@ -156,7 +162,7 @@ typeFields:
 | typeFields COMMA typeField (typeFields @ [typeField])
 
 typeField: 
- ID COLON ID ({name=symMod ID, escape=ref true, typ=symMod ID1, pos=IDleft})
+ ID COLON ID ({name=symMod ID, escape=ref false, typ=symMod ID1, pos=IDleft})
 
 
 variableDeclaration:
