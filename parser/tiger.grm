@@ -1,5 +1,71 @@
 structure A = Absyn
 fun symMod (s:string) : A.symbol = Symbol.symbol s
+
+(* --- helpers for "fixup" grouping of mutually recursive dec runs --- *)
+
+(* list-based duplicate check (no extra libraries) *)
+fun hasDupSym (xs : A.symbol list) : bool =
+  let
+    fun mem (x, []) = false
+      | mem (x, y::ys) = Symbol.eq(x,y) orelse mem(x, ys)
+    fun go (seen, []) = false
+      | go (seen, x::rest) =
+          if mem(x, seen) then true else go(x::seen, rest)
+  in
+    go ([], xs)
+  end
+
+fun errDup (pos:int) (what:string) =
+  ErrorMsg.error pos ("duplicate " ^ what ^ " name in mutually recursive declaration sequence")
+
+(* collect a maximal run of consecutive TypeDecs, concatenating their lists *)
+fun collectTypeRun (ds : A.dec list) : (A.typedec list * A.dec list) =
+  case ds of
+      A.TypeDec tds :: rest =>
+        let val (more, rest') = collectTypeRun rest
+        in (tds @ more, rest') end
+    | _ => ([], ds)
+
+(* collect a maximal run of consecutive FunctionDecs *)
+fun collectFunRun (ds : A.dec list) : (A.fundec list * A.dec list) =
+  case ds of
+      A.FunctionDec fds :: rest =>
+        let val (more, rest') = collectFunRun rest
+        in (fds @ more, rest') end
+    | _ => ([], ds)
+
+(* main fixup: group consecutive type/function singletons into one node each *)
+fun fixUp (ds : A.dec list) : A.dec list =
+  let
+    fun loop ([], acc) = rev acc
+      | loop (d::rest, acc) =
+          (case d of
+             A.TypeDec _ =>
+               let
+                 val (tds, rest') = collectTypeRun (d::rest)
+                 val names = map (fn {name, ty, pos} => name) tds
+                 val pos0  = (case tds of [] => 0 | {pos,...}::_ => pos)
+                 val _     = if hasDupSym names then errDup pos0 "type" else ()
+               in
+                 loop (rest', A.TypeDec tds :: acc)
+               end
+
+           | A.FunctionDec _ =>
+               let
+                 val (fds, rest') = collectFunRun (d::rest)
+                 val names = map (fn {name, params, result, body, pos} => name) fds
+                 val pos0  = (case fds of [] => 0 | {pos,...}::_ => pos)
+                 val _     = if hasDupSym names then errDup pos0 "function" else ()
+               in
+                 loop (rest', A.FunctionDec fds :: acc)
+               end
+
+           | _ =>
+               loop (rest, d :: acc))
+  in
+    loop (ds, [])
+  end
+
 (* user declarations *)
 (* You can define values available in the semantic actions of the rules in the user declarations section. It is recommended that you keep the size of this section as small as possible and place large blocks of code in other modules. *)
 %%
@@ -103,7 +169,7 @@ expr:
   | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
   | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=symMod ID, escape=ref false, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
   | BREAK (A.BreakExp BREAKleft)
-  | LET declarationList IN exprSeq END (A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
+  | LET declarationList IN exprSeq END (A.LetExp{decs= fixUp declarationList, body=A.SeqExp exprSeq, pos=LETleft})
 
 opExpr:
   STRING (A.StringExp(STRING, STRINGleft))
@@ -119,7 +185,7 @@ opExpr:
   | opExpr MINUS opExpr (A.OpExp{left=opExpr1, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
   | opExpr TIMES opExpr (A.OpExp{left=opExpr1, oper=A.TimesOp, right=opExpr2, pos=TIMESleft})
   | opExpr DIVIDE opExpr (A.OpExp{left=opExpr1, oper=A.DivideOp, right=opExpr2, pos=DIVIDEleft})
-  | MINUS opExpr %prec UMINUS (A.OpExp{left=A.IntExp 0, oper=A.MinusOp, right=opExpr, pos=MINUSleft})
+  | MINUS opExpr %prec UMINUS (A.OpExp{left=A.IntExp(0), oper=A.MinusOp, right=opExpr, pos=MINUSleft})
   | opExpr EQ opExpr (A.OpExp{left=opExpr1, oper=A.EqOp, right=opExpr2, pos=EQleft})
   | opExpr NEQ opExpr (A.OpExp{left=opExpr1, oper=A.NeqOp, right=opExpr2, pos=NEQleft})
   | opExpr LT opExpr (A.OpExp{left=opExpr1, oper=A.LtOp, right=opExpr2, pos=LTleft})
@@ -170,7 +236,7 @@ typeFields:
 | typeFields COMMA typeField (typeFields @ [typeField])
 
 typeField: 
- ID COLON ID ({name=symMod ID, escape=ref false, typ=symMod ID1, pos=IDleft})
+ ID COLON ID ({name=symMod ID1, escape=ref false, typ=symMod ID2, pos=IDleft})
 
 
 variableDeclaration:
