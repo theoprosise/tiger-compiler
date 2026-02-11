@@ -111,6 +111,9 @@ fun fixUp (ds : A.dec list) : A.dec list =
   | typeFields of A.field list
   | typeField of A.field
   | opExpr of A.exp
+  | primary of A.exp
+  | idTail of (A.symbol * A.pos -> A.exp)
+  | lvalTail of (A.var -> A.var)
 
 
 %pos int
@@ -174,15 +177,7 @@ expr:
   | LET declarationList IN exprSeq END (A.LetExp{decs= fixUp declarationList, body=A.SeqExp exprSeq, pos=LETleft})
 
 opExpr:
-  STRING (A.StringExp(STRING, STRINGleft))
-  | INT (A.IntExp INT)
-  | NIL (A.NilExp)
-  | lvalue (A.VarExp lvalue)
-  | ID LPAREN RPAREN (A.CallExp{func=symMod ID, args=[], pos=IDleft})
-  | ID LPAREN exprList RPAREN (A.CallExp{func=symMod ID, args=exprList, pos=IDleft})
-  | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
-  | ID LBRACE fieldList RBRACE (A.RecordExp{typ=symMod ID, fields=fieldList, pos=IDleft})
-  | ID LBRACK expr RBRACK OF expr (A.ArrayExp{typ=symMod ID, size=expr1, init=expr2, pos=IDleft})
+  primary (primary)
   | opExpr PLUS opExpr (A.OpExp{left=opExpr1, oper=A.PlusOp, right=opExpr2, pos=PLUSleft})
   | opExpr MINUS opExpr (A.OpExp{left=opExpr1, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
   | opExpr TIMES opExpr (A.OpExp{left=opExpr1, oper=A.TimesOp, right=opExpr2, pos=TIMESleft})
@@ -196,6 +191,30 @@ opExpr:
   | opExpr GE opExpr (A.OpExp{left=opExpr1, oper=A.GeOp, right=opExpr2, pos=GEleft})
   | opExpr AND opExpr (A.IfExp{ test=opExpr1, then'=opExpr2, else'=SOME(A.IntExp 0), pos=ANDleft })
   | opExpr OR opExpr (A.IfExp{ test=opExpr1, then'=A.IntExp 1, else'=SOME opExpr2, pos=ORleft })
+
+primary:
+  STRING (A.StringExp(STRING, STRINGleft))
+  | INT (A.IntExp INT)
+  | NIL (A.NilExp)
+  | LPAREN RPAREN (A.SeqExp [])
+  | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
+  | ID idTail (idTail (symMod ID, IDleft))
+
+idTail:
+  (* call *)
+  LPAREN RPAREN
+  (fn (f, p) => A.CallExp{func=f, args=[], pos=p})
+  | LPAREN exprList RPAREN
+  (fn (f, p) => A.CallExp{func=f, args=exprList, pos=p})
+  (* record literal *)
+  | LBRACE fieldList RBRACE
+  (fn (t, p) => A.RecordExp{typ=t, fields=fieldList, pos=p})
+  (* array literal *)
+  | LBRACK expr RBRACK OF expr
+  (fn (t, p) => A.ArrayExp{typ=t, size=expr1, init=expr2, pos=p})
+  (* otherwise: it's an lvalue tail *)
+  | lvalTail
+  (fn (x, p) => A.VarExp (lvalTail (A.SimpleVar(x, p))))
 
 
 exprSeq: 
@@ -211,10 +230,15 @@ fieldList:
   | fieldList COMMA ID EQ expr (fieldList @ [(symMod ID, expr, IDleft)])
 
 
-lvalue: 
-  ID  (A.SimpleVar(symMod ID, IDleft))
-  | lvalue DOT ID (A.FieldVar(lvalue, symMod ID, IDleft))
-  | lvalue LBRACK expr RBRACK (A.SubscriptVar(lvalue, expr, LBRACKleft))
+lvalue:
+  ID lvalTail
+  (let val base = A.SimpleVar(symMod ID, IDleft) in lvalTail base end)
+
+lvalTail:
+  (fn v => v)
+  | DOT ID lvalTail (fn v => lvalTail (A.FieldVar(v, symMod ID, IDleft)))
+  | LBRACK expr RBRACK lvalTail (fn v => lvalTail (A.SubscriptVar(v, expr, LBRACKleft)))
+
 
 declarationList: 
   ([])
@@ -243,14 +267,14 @@ typeField:
 
 variableDeclaration:
   VAR ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=NONE, init=expr, pos=VARleft})
-  | VAR ID COLON ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=SOME(symMod ID1, ID1left), init=expr, pos=VARleft})
+  | VAR ID COLON ID ASSIGN expr (A.VarDec{name=symMod ID1, escape=ref false, typ=SOME(symMod ID2, ID2left), init=expr, pos=VARleft})
 
 functionDeclaration:
   FUNCTION ID LPAREN RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=NONE, body=expr, pos=FUNCTIONleft}]))
   | FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ]))
-  | FUNCTION ID LPAREN RPAREN COLON ID EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=SOME(symMod ID1, ID1left), body=expr, pos=FUNCTIONleft}]))
+  | FUNCTION ID LPAREN RPAREN COLON ID EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=SOME(symMod ID2, ID2left), body=expr, pos=FUNCTIONleft}]))
   | FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ expr 
-  (A.FunctionDec ([{name=symMod ID, params=typeFields, result=SOME(symMod ID1, ID1left), body=expr, pos=FUNCTIONleft}]))
+  (A.FunctionDec ([{name=symMod ID, params=typeFields, result=SOME(symMod ID2, ID2left), body=expr, pos=FUNCTIONleft}]))
 
 
 

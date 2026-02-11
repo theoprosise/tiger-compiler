@@ -1,33 +1,42 @@
-2 shift/reduce conflicts
+1 shift/reduce conflict
 
-error:  state 14: shift/reduce conflict (shift LBRACK, reduce by rule 37)
-error:  state 82: shift/reduce conflict (shift ELSE, reduce by rule 3)
+error:  state 84: shift/reduce conflict (shift ELSE, reduce by rule 3)
 
 state 0:
 
 	program : . expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	program	goto 141
-	expr	goto 3
-	lvalue	goto 2
-	opExpr	goto 1
+	program	goto 148
+	expr	goto 4
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 1:
+
+	opExpr : primary .  (reduce by rule 9)
+
+
+
+	.	reduce by rule 9
+
+
+state 2:
 
 	expr : opExpr .  (reduce by rule 1)
 	opExpr : opExpr . PLUS opExpr 
@@ -43,39 +52,34 @@ state 1:
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	EQ	shift 22
-	NEQ	shift 21
-	LT	shift 20
-	LE	shift 19
-	GT	shift 18
-	GE	shift 17
-	AND	shift 16
-	OR	shift 15
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	EQ	shift 23
+	NEQ	shift 22
+	LT	shift 21
+	LE	shift 20
+	GT	shift 19
+	GE	shift 18
+	AND	shift 17
+	OR	shift 16
 
 
 	.	reduce by rule 1
 
 
-state 2:
+state 3:
 
 	expr : lvalue . ASSIGN expr 
-	lvalue : lvalue . DOT ID 
-	lvalue : lvalue . LBRACK expr RBRACK 
-	opExpr : lvalue .  (reduce by rule 12)
 
-	LBRACK	shift 29
-	DOT	shift 28
-	ASSIGN	shift 27
+	ASSIGN	shift 28
 
 
-	.	reduce by rule 12
+	.	error
 
 
-state 3:
+state 4:
 
 	program : expr .  (reduce by rule 0)
 
@@ -84,16 +88,16 @@ state 3:
 	.	reduce by rule 0
 
 
-state 4:
-
-	opExpr : NIL .  (reduce by rule 11)
-
-
-
-	.	reduce by rule 11
-
-
 state 5:
+
+	primary : NIL .  (reduce by rule 25)
+
+
+
+	.	reduce by rule 25
+
+
+state 6:
 
 	expr : BREAK .  (reduce by rule 7)
 
@@ -102,432 +106,414 @@ state 5:
 	.	reduce by rule 7
 
 
-state 6:
+state 7:
 
 	expr : LET . declarationList IN exprSeq END 
 
 
-	declarationList	goto 30
+	declarationList	goto 29
 
-	.	reduce by rule 40
-
-
-state 7:
-
-	expr : FOR . ID ASSIGN expr TO expr DO expr 
-
-	ID	shift 31
-
-
-	.	error
+	.	reduce by rule 44
 
 
 state 8:
 
-	expr : WHILE . expr DO expr 
+	expr : FOR . ID ASSIGN expr TO expr DO expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 30
 
-	expr	goto 32
-	lvalue	goto 2
-	opExpr	goto 1
 
 	.	error
 
 
 state 9:
 
-	expr : IF . expr THEN expr 
-	expr : IF . expr THEN expr ELSE expr 
+	expr : WHILE . expr DO expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	expr	goto 33
-	lvalue	goto 2
-	opExpr	goto 1
+	expr	goto 31
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 10:
 
-	opExpr : MINUS . opExpr 
+	expr : IF . expr THEN expr 
+	expr : IF . expr THEN expr ELSE expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 34
+	expr	goto 32
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 11:
 
-	opExpr : LPAREN . exprSeq RPAREN 
+	opExpr : MINUS . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	expr	goto 37
-	lvalue	goto 2
-	exprSeq	goto 36
-	opExpr	goto 1
+	opExpr	goto 33
+	primary	goto 1
 
 	.	error
 
 
 state 12:
 
-	opExpr : STRING .  (reduce by rule 9)
+	primary : LPAREN . RPAREN 
+	primary : LPAREN . exprSeq RPAREN 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	RPAREN	shift 37
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-
-	.	reduce by rule 9
-
-
-state 13:
-
-	opExpr : INT .  (reduce by rule 10)
-
-
-
-	.	reduce by rule 10
-
-error:  state 14: shift/reduce conflict (shift LBRACK, reduce by rule 37)
-
-state 14:
-
-	lvalue : ID .  (reduce by rule 37)
-	opExpr : ID . LPAREN RPAREN 
-	opExpr : ID . LPAREN exprList RPAREN 
-	opExpr : ID . LBRACE fieldList RBRACE 
-	opExpr : ID . LBRACK expr RBRACK OF expr 
-
-	LPAREN	shift 40
-	LBRACK	shift 39
-	LBRACE	shift 38
-
-
-	.	reduce by rule 37
-
-
-state 15:
-
-	opExpr : opExpr OR . opExpr 
-
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
-
-	lvalue	goto 35
-	opExpr	goto 41
+	expr	goto 36
+	lvalue	goto 3
+	exprSeq	goto 35
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
+state 13:
+
+	primary : STRING .  (reduce by rule 23)
+
+
+
+	.	reduce by rule 23
+
+
+state 14:
+
+	primary : INT .  (reduce by rule 24)
+
+
+
+	.	reduce by rule 24
+
+
+state 15:
+
+	lvalue : ID . lvalTail 
+	primary : ID . idTail 
+
+	LPAREN	shift 43
+	LBRACK	shift 42
+	LBRACE	shift 41
+	DOT	shift 40
+
+	idTail	goto 39
+	lvalTail	goto 38
+
+	.	reduce by rule 41
+
+
 state 16:
 
-	opExpr : opExpr AND . opExpr 
+	opExpr : opExpr OR . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 42
+	opExpr	goto 44
+	primary	goto 1
 
 	.	error
 
 
 state 17:
 
-	opExpr : opExpr GE . opExpr 
+	opExpr : opExpr AND . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 43
+	opExpr	goto 45
+	primary	goto 1
 
 	.	error
 
 
 state 18:
 
-	opExpr : opExpr GT . opExpr 
+	opExpr : opExpr GE . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 44
+	opExpr	goto 46
+	primary	goto 1
 
 	.	error
 
 
 state 19:
 
-	opExpr : opExpr LE . opExpr 
+	opExpr : opExpr GT . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 45
+	opExpr	goto 47
+	primary	goto 1
 
 	.	error
 
 
 state 20:
 
-	opExpr : opExpr LT . opExpr 
+	opExpr : opExpr LE . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 46
+	opExpr	goto 48
+	primary	goto 1
 
 	.	error
 
 
 state 21:
 
-	opExpr : opExpr NEQ . opExpr 
+	opExpr : opExpr LT . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 47
+	opExpr	goto 49
+	primary	goto 1
 
 	.	error
 
 
 state 22:
 
-	opExpr : opExpr EQ . opExpr 
+	opExpr : opExpr NEQ . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 48
+	opExpr	goto 50
+	primary	goto 1
 
 	.	error
 
 
 state 23:
 
-	opExpr : opExpr DIVIDE . opExpr 
+	opExpr : opExpr EQ . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 49
+	opExpr	goto 51
+	primary	goto 1
 
 	.	error
 
 
 state 24:
 
-	opExpr : opExpr TIMES . opExpr 
+	opExpr : opExpr DIVIDE . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 50
+	opExpr	goto 52
+	primary	goto 1
 
 	.	error
 
 
 state 25:
 
-	opExpr : opExpr MINUS . opExpr 
+	opExpr : opExpr TIMES . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 51
+	opExpr	goto 53
+	primary	goto 1
 
 	.	error
 
 
 state 26:
 
-	opExpr : opExpr PLUS . opExpr 
+	opExpr : opExpr MINUS . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	lvalue	goto 35
-	opExpr	goto 52
+	opExpr	goto 54
+	primary	goto 1
 
 	.	error
 
 
 state 27:
 
-	expr : lvalue ASSIGN . expr 
+	opExpr : opExpr PLUS . opExpr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 34
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	NIL	shift 5
 
-	expr	goto 53
-	lvalue	goto 2
-	opExpr	goto 1
+	opExpr	goto 55
+	primary	goto 1
 
 	.	error
 
 
 state 28:
 
-	lvalue : lvalue DOT . ID 
+	expr : lvalue ASSIGN . expr 
 
-	ID	shift 54
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 56
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 29:
 
-	lvalue : lvalue LBRACK . expr RBRACK 
+	expr : LET declarationList . IN exprSeq END 
+	declarationList : declarationList . declaration 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	IN	shift 64
+	FUNCTION	shift 63
+	VAR	shift 62
+	TYPE	shift 61
 
-	expr	goto 55
-	lvalue	goto 2
-	opExpr	goto 1
+	declaration	goto 60
+	typeDeclaration	goto 59
+	variableDeclaration	goto 58
+	functionDeclaration	goto 57
 
 	.	error
 
 
 state 30:
 
-	expr : LET declarationList . IN exprSeq END 
-	declarationList : declarationList . declaration 
+	expr : FOR ID . ASSIGN expr TO expr DO expr 
 
-	IN	shift 63
-	FUNCTION	shift 62
-	VAR	shift 61
-	TYPE	shift 60
+	ASSIGN	shift 65
 
-	declaration	goto 59
-	typeDeclaration	goto 58
-	variableDeclaration	goto 57
-	functionDeclaration	goto 56
 
 	.	error
 
 
 state 31:
 
-	expr : FOR ID . ASSIGN expr TO expr DO expr 
+	expr : WHILE expr . DO expr 
 
-	ASSIGN	shift 64
+	DO	shift 66
 
 
 	.	error
@@ -535,9 +521,10 @@ state 31:
 
 state 32:
 
-	expr : WHILE expr . DO expr 
+	expr : IF expr . THEN expr 
+	expr : IF expr . THEN expr ELSE expr 
 
-	DO	shift 65
+	THEN	shift 67
 
 
 	.	error
@@ -545,22 +532,11 @@ state 32:
 
 state 33:
 
-	expr : IF expr . THEN expr 
-	expr : IF expr . THEN expr ELSE expr 
-
-	THEN	shift 66
-
-
-	.	error
-
-
-state 34:
-
 	opExpr : opExpr . PLUS opExpr 
 	opExpr : opExpr . MINUS opExpr 
 	opExpr : opExpr . TIMES opExpr 
 	opExpr : opExpr . DIVIDE opExpr 
-	opExpr : MINUS opExpr .  (reduce by rule 22)
+	opExpr : MINUS opExpr .  (reduce by rule 14)
 	opExpr : opExpr . EQ opExpr 
 	opExpr : opExpr . NEQ opExpr 
 	opExpr : opExpr . LT opExpr 
@@ -572,204 +548,170 @@ state 34:
 
 
 
-	.	reduce by rule 22
+	.	reduce by rule 14
+
+
+state 34:
+
+	primary : ID . idTail 
+
+	LPAREN	shift 43
+	LBRACK	shift 42
+	LBRACE	shift 41
+	DOT	shift 40
+
+	idTail	goto 39
+	lvalTail	goto 68
+
+	.	reduce by rule 41
 
 
 state 35:
 
-	lvalue : lvalue . DOT ID 
-	lvalue : lvalue . LBRACK expr RBRACK 
-	opExpr : lvalue .  (reduce by rule 12)
-
-	LBRACK	shift 29
-	DOT	shift 28
-
-
-	.	reduce by rule 12
-
-
-state 36:
-
 	exprSeq : exprSeq . SEMICOLON expr 
-	opExpr : LPAREN exprSeq . RPAREN 
+	primary : LPAREN exprSeq . RPAREN 
 
-	SEMICOLON	shift 68
-	RPAREN	shift 67
+	SEMICOLON	shift 70
+	RPAREN	shift 69
 
 
 	.	error
 
 
+state 36:
+
+	exprSeq : expr .  (reduce by rule 34)
+
+
+
+	.	reduce by rule 34
+
+
 state 37:
 
-	exprSeq : expr .  (reduce by rule 31)
+	primary : LPAREN RPAREN .  (reduce by rule 26)
 
 
 
-	.	reduce by rule 31
+	.	reduce by rule 26
 
 
 state 38:
 
-	opExpr : ID LBRACE . fieldList RBRACE 
+	lvalue : ID lvalTail .  (reduce by rule 40)
+	idTail : lvalTail .  (reduce by rule 33)
 
-	ID	shift 70
+	EOF	reduce by rule 33
+	COMMA	reduce by rule 33
+	SEMICOLON	reduce by rule 33
+	RPAREN	reduce by rule 33
+	RBRACK	reduce by rule 33
+	RBRACE	reduce by rule 33
+	PLUS	reduce by rule 33
+	MINUS	reduce by rule 33
+	TIMES	reduce by rule 33
+	DIVIDE	reduce by rule 33
+	EQ	reduce by rule 33
+	NEQ	reduce by rule 33
+	LT	reduce by rule 33
+	LE	reduce by rule 33
+	GT	reduce by rule 33
+	GE	reduce by rule 33
+	AND	reduce by rule 33
+	OR	reduce by rule 33
+	ASSIGN	reduce by rule 40
+	THEN	reduce by rule 33
+	ELSE	reduce by rule 33
+	TO	reduce by rule 33
+	DO	reduce by rule 33
+	IN	reduce by rule 33
+	END	reduce by rule 33
+	FUNCTION	reduce by rule 33
+	VAR	reduce by rule 33
+	TYPE	reduce by rule 33
 
-	fieldList	goto 69
 
 	.	error
 
 
 state 39:
 
-	opExpr : ID LBRACK . expr RBRACK OF expr 
+	primary : ID idTail .  (reduce by rule 28)
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
 
-	expr	goto 71
-	lvalue	goto 2
-	opExpr	goto 1
 
-	.	error
+	.	reduce by rule 28
 
 
 state 40:
 
-	opExpr : ID LPAREN . RPAREN 
-	opExpr : ID LPAREN . exprList RPAREN 
+	lvalTail : DOT . ID lvalTail 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	RPAREN	shift 74
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 71
 
-	expr	goto 73
-	lvalue	goto 2
-	exprList	goto 72
-	opExpr	goto 1
 
 	.	error
 
 
 state 41:
 
-	opExpr : opExpr . PLUS opExpr 
-	opExpr : opExpr . MINUS opExpr 
-	opExpr : opExpr . TIMES opExpr 
-	opExpr : opExpr . DIVIDE opExpr 
-	opExpr : opExpr . EQ opExpr 
-	opExpr : opExpr . NEQ opExpr 
-	opExpr : opExpr . LT opExpr 
-	opExpr : opExpr . LE opExpr 
-	opExpr : opExpr . GT opExpr 
-	opExpr : opExpr . GE opExpr 
-	opExpr : opExpr . AND opExpr 
-	opExpr : opExpr . OR opExpr 
-	opExpr : opExpr OR opExpr .  (reduce by rule 30)
+	idTail : LBRACE . fieldList RBRACE 
 
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	EQ	shift 22
-	NEQ	shift 21
-	LT	shift 20
-	LE	shift 19
-	GT	shift 18
-	GE	shift 17
-	AND	shift 16
+	ID	shift 73
 
+	fieldList	goto 72
 
-	.	reduce by rule 30
+	.	error
 
 
 state 42:
 
-	opExpr : opExpr . PLUS opExpr 
-	opExpr : opExpr . MINUS opExpr 
-	opExpr : opExpr . TIMES opExpr 
-	opExpr : opExpr . DIVIDE opExpr 
-	opExpr : opExpr . EQ opExpr 
-	opExpr : opExpr . NEQ opExpr 
-	opExpr : opExpr . LT opExpr 
-	opExpr : opExpr . LE opExpr 
-	opExpr : opExpr . GT opExpr 
-	opExpr : opExpr . GE opExpr 
-	opExpr : opExpr . AND opExpr 
-	opExpr : opExpr AND opExpr .  (reduce by rule 29)
-	opExpr : opExpr . OR opExpr 
+	idTail : LBRACK . expr RBRACK OF expr 
+	lvalTail : LBRACK . expr RBRACK lvalTail 
 
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	EQ	shift 22
-	NEQ	shift 21
-	LT	shift 20
-	LE	shift 19
-	GT	shift 18
-	GE	shift 17
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 74
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
-	.	reduce by rule 29
+	.	error
 
 
 state 43:
 
-	opExpr : opExpr . PLUS opExpr 
-	opExpr : opExpr . MINUS opExpr 
-	opExpr : opExpr . TIMES opExpr 
-	opExpr : opExpr . DIVIDE opExpr 
-	opExpr : opExpr . EQ opExpr 
-	opExpr : opExpr . NEQ opExpr 
-	opExpr : opExpr . LT opExpr 
-	opExpr : opExpr . LE opExpr 
-	opExpr : opExpr . GT opExpr 
-	opExpr : opExpr . GE opExpr 
-	opExpr : opExpr GE opExpr .  (reduce by rule 28)
-	opExpr : opExpr . AND opExpr 
-	opExpr : opExpr . OR opExpr 
+	idTail : LPAREN . RPAREN 
+	idTail : LPAREN . exprList RPAREN 
 
-	EOF	reduce by rule 28
-	COMMA	reduce by rule 28
-	SEMICOLON	reduce by rule 28
-	RPAREN	reduce by rule 28
-	RBRACK	reduce by rule 28
-	RBRACE	reduce by rule 28
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	AND	reduce by rule 28
-	OR	reduce by rule 28
-	THEN	reduce by rule 28
-	ELSE	reduce by rule 28
-	TO	reduce by rule 28
-	DO	reduce by rule 28
-	IN	reduce by rule 28
-	END	reduce by rule 28
-	FUNCTION	reduce by rule 28
-	VAR	reduce by rule 28
-	TYPE	reduce by rule 28
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	RPAREN	shift 77
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 76
+	lvalue	goto 3
+	exprList	goto 75
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
@@ -785,35 +727,25 @@ state 44:
 	opExpr : opExpr . LT opExpr 
 	opExpr : opExpr . LE opExpr 
 	opExpr : opExpr . GT opExpr 
-	opExpr : opExpr GT opExpr .  (reduce by rule 27)
 	opExpr : opExpr . GE opExpr 
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
+	opExpr : opExpr OR opExpr .  (reduce by rule 22)
 
-	EOF	reduce by rule 27
-	COMMA	reduce by rule 27
-	SEMICOLON	reduce by rule 27
-	RPAREN	reduce by rule 27
-	RBRACK	reduce by rule 27
-	RBRACE	reduce by rule 27
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	AND	reduce by rule 27
-	OR	reduce by rule 27
-	THEN	reduce by rule 27
-	ELSE	reduce by rule 27
-	TO	reduce by rule 27
-	DO	reduce by rule 27
-	IN	reduce by rule 27
-	END	reduce by rule 27
-	FUNCTION	reduce by rule 27
-	VAR	reduce by rule 27
-	TYPE	reduce by rule 27
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	EQ	shift 23
+	NEQ	shift 22
+	LT	shift 21
+	LE	shift 20
+	GT	shift 19
+	GE	shift 18
+	AND	shift 17
 
 
-	.	error
+	.	reduce by rule 22
 
 
 state 45:
@@ -826,36 +758,25 @@ state 45:
 	opExpr : opExpr . NEQ opExpr 
 	opExpr : opExpr . LT opExpr 
 	opExpr : opExpr . LE opExpr 
-	opExpr : opExpr LE opExpr .  (reduce by rule 26)
 	opExpr : opExpr . GT opExpr 
 	opExpr : opExpr . GE opExpr 
 	opExpr : opExpr . AND opExpr 
+	opExpr : opExpr AND opExpr .  (reduce by rule 21)
 	opExpr : opExpr . OR opExpr 
 
-	EOF	reduce by rule 26
-	COMMA	reduce by rule 26
-	SEMICOLON	reduce by rule 26
-	RPAREN	reduce by rule 26
-	RBRACK	reduce by rule 26
-	RBRACE	reduce by rule 26
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	AND	reduce by rule 26
-	OR	reduce by rule 26
-	THEN	reduce by rule 26
-	ELSE	reduce by rule 26
-	TO	reduce by rule 26
-	DO	reduce by rule 26
-	IN	reduce by rule 26
-	END	reduce by rule 26
-	FUNCTION	reduce by rule 26
-	VAR	reduce by rule 26
-	TYPE	reduce by rule 26
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	EQ	shift 23
+	NEQ	shift 22
+	LT	shift 21
+	LE	shift 20
+	GT	shift 19
+	GE	shift 18
 
 
-	.	error
+	.	reduce by rule 21
 
 
 state 46:
@@ -867,34 +788,34 @@ state 46:
 	opExpr : opExpr . EQ opExpr 
 	opExpr : opExpr . NEQ opExpr 
 	opExpr : opExpr . LT opExpr 
-	opExpr : opExpr LT opExpr .  (reduce by rule 25)
 	opExpr : opExpr . LE opExpr 
 	opExpr : opExpr . GT opExpr 
 	opExpr : opExpr . GE opExpr 
+	opExpr : opExpr GE opExpr .  (reduce by rule 20)
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
-	EOF	reduce by rule 25
-	COMMA	reduce by rule 25
-	SEMICOLON	reduce by rule 25
-	RPAREN	reduce by rule 25
-	RBRACK	reduce by rule 25
-	RBRACE	reduce by rule 25
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	AND	reduce by rule 25
-	OR	reduce by rule 25
-	THEN	reduce by rule 25
-	ELSE	reduce by rule 25
-	TO	reduce by rule 25
-	DO	reduce by rule 25
-	IN	reduce by rule 25
-	END	reduce by rule 25
-	FUNCTION	reduce by rule 25
-	VAR	reduce by rule 25
-	TYPE	reduce by rule 25
+	EOF	reduce by rule 20
+	COMMA	reduce by rule 20
+	SEMICOLON	reduce by rule 20
+	RPAREN	reduce by rule 20
+	RBRACK	reduce by rule 20
+	RBRACE	reduce by rule 20
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	AND	reduce by rule 20
+	OR	reduce by rule 20
+	THEN	reduce by rule 20
+	ELSE	reduce by rule 20
+	TO	reduce by rule 20
+	DO	reduce by rule 20
+	IN	reduce by rule 20
+	END	reduce by rule 20
+	FUNCTION	reduce by rule 20
+	VAR	reduce by rule 20
+	TYPE	reduce by rule 20
 
 
 	.	error
@@ -908,35 +829,35 @@ state 47:
 	opExpr : opExpr . DIVIDE opExpr 
 	opExpr : opExpr . EQ opExpr 
 	opExpr : opExpr . NEQ opExpr 
-	opExpr : opExpr NEQ opExpr .  (reduce by rule 24)
 	opExpr : opExpr . LT opExpr 
 	opExpr : opExpr . LE opExpr 
 	opExpr : opExpr . GT opExpr 
+	opExpr : opExpr GT opExpr .  (reduce by rule 19)
 	opExpr : opExpr . GE opExpr 
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
-	EOF	reduce by rule 24
-	COMMA	reduce by rule 24
-	SEMICOLON	reduce by rule 24
-	RPAREN	reduce by rule 24
-	RBRACK	reduce by rule 24
-	RBRACE	reduce by rule 24
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	AND	reduce by rule 24
-	OR	reduce by rule 24
-	THEN	reduce by rule 24
-	ELSE	reduce by rule 24
-	TO	reduce by rule 24
-	DO	reduce by rule 24
-	IN	reduce by rule 24
-	END	reduce by rule 24
-	FUNCTION	reduce by rule 24
-	VAR	reduce by rule 24
-	TYPE	reduce by rule 24
+	EOF	reduce by rule 19
+	COMMA	reduce by rule 19
+	SEMICOLON	reduce by rule 19
+	RPAREN	reduce by rule 19
+	RBRACK	reduce by rule 19
+	RBRACE	reduce by rule 19
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	AND	reduce by rule 19
+	OR	reduce by rule 19
+	THEN	reduce by rule 19
+	ELSE	reduce by rule 19
+	TO	reduce by rule 19
+	DO	reduce by rule 19
+	IN	reduce by rule 19
+	END	reduce by rule 19
+	FUNCTION	reduce by rule 19
+	VAR	reduce by rule 19
+	TYPE	reduce by rule 19
 
 
 	.	error
@@ -949,36 +870,36 @@ state 48:
 	opExpr : opExpr . TIMES opExpr 
 	opExpr : opExpr . DIVIDE opExpr 
 	opExpr : opExpr . EQ opExpr 
-	opExpr : opExpr EQ opExpr .  (reduce by rule 23)
 	opExpr : opExpr . NEQ opExpr 
 	opExpr : opExpr . LT opExpr 
 	opExpr : opExpr . LE opExpr 
+	opExpr : opExpr LE opExpr .  (reduce by rule 18)
 	opExpr : opExpr . GT opExpr 
 	opExpr : opExpr . GE opExpr 
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
-	EOF	reduce by rule 23
-	COMMA	reduce by rule 23
-	SEMICOLON	reduce by rule 23
-	RPAREN	reduce by rule 23
-	RBRACK	reduce by rule 23
-	RBRACE	reduce by rule 23
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	AND	reduce by rule 23
-	OR	reduce by rule 23
-	THEN	reduce by rule 23
-	ELSE	reduce by rule 23
-	TO	reduce by rule 23
-	DO	reduce by rule 23
-	IN	reduce by rule 23
-	END	reduce by rule 23
-	FUNCTION	reduce by rule 23
-	VAR	reduce by rule 23
-	TYPE	reduce by rule 23
+	EOF	reduce by rule 18
+	COMMA	reduce by rule 18
+	SEMICOLON	reduce by rule 18
+	RPAREN	reduce by rule 18
+	RBRACK	reduce by rule 18
+	RBRACE	reduce by rule 18
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	AND	reduce by rule 18
+	OR	reduce by rule 18
+	THEN	reduce by rule 18
+	ELSE	reduce by rule 18
+	TO	reduce by rule 18
+	DO	reduce by rule 18
+	IN	reduce by rule 18
+	END	reduce by rule 18
+	FUNCTION	reduce by rule 18
+	VAR	reduce by rule 18
+	TYPE	reduce by rule 18
 
 
 	.	error
@@ -990,19 +911,40 @@ state 49:
 	opExpr : opExpr . MINUS opExpr 
 	opExpr : opExpr . TIMES opExpr 
 	opExpr : opExpr . DIVIDE opExpr 
-	opExpr : opExpr DIVIDE opExpr .  (reduce by rule 21)
 	opExpr : opExpr . EQ opExpr 
 	opExpr : opExpr . NEQ opExpr 
 	opExpr : opExpr . LT opExpr 
+	opExpr : opExpr LT opExpr .  (reduce by rule 17)
 	opExpr : opExpr . LE opExpr 
 	opExpr : opExpr . GT opExpr 
 	opExpr : opExpr . GE opExpr 
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
+	EOF	reduce by rule 17
+	COMMA	reduce by rule 17
+	SEMICOLON	reduce by rule 17
+	RPAREN	reduce by rule 17
+	RBRACK	reduce by rule 17
+	RBRACE	reduce by rule 17
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	AND	reduce by rule 17
+	OR	reduce by rule 17
+	THEN	reduce by rule 17
+	ELSE	reduce by rule 17
+	TO	reduce by rule 17
+	DO	reduce by rule 17
+	IN	reduce by rule 17
+	END	reduce by rule 17
+	FUNCTION	reduce by rule 17
+	VAR	reduce by rule 17
+	TYPE	reduce by rule 17
 
 
-	.	reduce by rule 21
+	.	error
 
 
 state 50:
@@ -1010,10 +952,10 @@ state 50:
 	opExpr : opExpr . PLUS opExpr 
 	opExpr : opExpr . MINUS opExpr 
 	opExpr : opExpr . TIMES opExpr 
-	opExpr : opExpr TIMES opExpr .  (reduce by rule 20)
 	opExpr : opExpr . DIVIDE opExpr 
 	opExpr : opExpr . EQ opExpr 
 	opExpr : opExpr . NEQ opExpr 
+	opExpr : opExpr NEQ opExpr .  (reduce by rule 16)
 	opExpr : opExpr . LT opExpr 
 	opExpr : opExpr . LE opExpr 
 	opExpr : opExpr . GT opExpr 
@@ -1021,16 +963,121 @@ state 50:
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
+	EOF	reduce by rule 16
+	COMMA	reduce by rule 16
+	SEMICOLON	reduce by rule 16
+	RPAREN	reduce by rule 16
+	RBRACK	reduce by rule 16
+	RBRACE	reduce by rule 16
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	AND	reduce by rule 16
+	OR	reduce by rule 16
+	THEN	reduce by rule 16
+	ELSE	reduce by rule 16
+	TO	reduce by rule 16
+	DO	reduce by rule 16
+	IN	reduce by rule 16
+	END	reduce by rule 16
+	FUNCTION	reduce by rule 16
+	VAR	reduce by rule 16
+	TYPE	reduce by rule 16
 
 
-	.	reduce by rule 20
+	.	error
 
 
 state 51:
 
 	opExpr : opExpr . PLUS opExpr 
 	opExpr : opExpr . MINUS opExpr 
-	opExpr : opExpr MINUS opExpr .  (reduce by rule 19)
+	opExpr : opExpr . TIMES opExpr 
+	opExpr : opExpr . DIVIDE opExpr 
+	opExpr : opExpr . EQ opExpr 
+	opExpr : opExpr EQ opExpr .  (reduce by rule 15)
+	opExpr : opExpr . NEQ opExpr 
+	opExpr : opExpr . LT opExpr 
+	opExpr : opExpr . LE opExpr 
+	opExpr : opExpr . GT opExpr 
+	opExpr : opExpr . GE opExpr 
+	opExpr : opExpr . AND opExpr 
+	opExpr : opExpr . OR opExpr 
+
+	EOF	reduce by rule 15
+	COMMA	reduce by rule 15
+	SEMICOLON	reduce by rule 15
+	RPAREN	reduce by rule 15
+	RBRACK	reduce by rule 15
+	RBRACE	reduce by rule 15
+	PLUS	shift 27
+	MINUS	shift 26
+	TIMES	shift 25
+	DIVIDE	shift 24
+	AND	reduce by rule 15
+	OR	reduce by rule 15
+	THEN	reduce by rule 15
+	ELSE	reduce by rule 15
+	TO	reduce by rule 15
+	DO	reduce by rule 15
+	IN	reduce by rule 15
+	END	reduce by rule 15
+	FUNCTION	reduce by rule 15
+	VAR	reduce by rule 15
+	TYPE	reduce by rule 15
+
+
+	.	error
+
+
+state 52:
+
+	opExpr : opExpr . PLUS opExpr 
+	opExpr : opExpr . MINUS opExpr 
+	opExpr : opExpr . TIMES opExpr 
+	opExpr : opExpr . DIVIDE opExpr 
+	opExpr : opExpr DIVIDE opExpr .  (reduce by rule 13)
+	opExpr : opExpr . EQ opExpr 
+	opExpr : opExpr . NEQ opExpr 
+	opExpr : opExpr . LT opExpr 
+	opExpr : opExpr . LE opExpr 
+	opExpr : opExpr . GT opExpr 
+	opExpr : opExpr . GE opExpr 
+	opExpr : opExpr . AND opExpr 
+	opExpr : opExpr . OR opExpr 
+
+
+
+	.	reduce by rule 13
+
+
+state 53:
+
+	opExpr : opExpr . PLUS opExpr 
+	opExpr : opExpr . MINUS opExpr 
+	opExpr : opExpr . TIMES opExpr 
+	opExpr : opExpr TIMES opExpr .  (reduce by rule 12)
+	opExpr : opExpr . DIVIDE opExpr 
+	opExpr : opExpr . EQ opExpr 
+	opExpr : opExpr . NEQ opExpr 
+	opExpr : opExpr . LT opExpr 
+	opExpr : opExpr . LE opExpr 
+	opExpr : opExpr . GT opExpr 
+	opExpr : opExpr . GE opExpr 
+	opExpr : opExpr . AND opExpr 
+	opExpr : opExpr . OR opExpr 
+
+
+
+	.	reduce by rule 12
+
+
+state 54:
+
+	opExpr : opExpr . PLUS opExpr 
+	opExpr : opExpr . MINUS opExpr 
+	opExpr : opExpr MINUS opExpr .  (reduce by rule 11)
 	opExpr : opExpr . TIMES opExpr 
 	opExpr : opExpr . DIVIDE opExpr 
 	opExpr : opExpr . EQ opExpr 
@@ -1042,17 +1089,17 @@ state 51:
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
-	TIMES	shift 24
-	DIVIDE	shift 23
+	TIMES	shift 25
+	DIVIDE	shift 24
 
 
-	.	reduce by rule 19
+	.	reduce by rule 11
 
 
-state 52:
+state 55:
 
 	opExpr : opExpr . PLUS opExpr 
-	opExpr : opExpr PLUS opExpr .  (reduce by rule 18)
+	opExpr : opExpr PLUS opExpr .  (reduce by rule 10)
 	opExpr : opExpr . MINUS opExpr 
 	opExpr : opExpr . TIMES opExpr 
 	opExpr : opExpr . DIVIDE opExpr 
@@ -1065,14 +1112,14 @@ state 52:
 	opExpr : opExpr . AND opExpr 
 	opExpr : opExpr . OR opExpr 
 
-	TIMES	shift 24
-	DIVIDE	shift 23
+	TIMES	shift 25
+	DIVIDE	shift 24
 
 
-	.	reduce by rule 18
+	.	reduce by rule 10
 
 
-state 53:
+state 56:
 
 	expr : lvalue ASSIGN expr .  (reduce by rule 2)
 
@@ -1081,88 +1128,45 @@ state 53:
 	.	reduce by rule 2
 
 
-state 54:
-
-	lvalue : lvalue DOT ID .  (reduce by rule 38)
-
-
-
-	.	reduce by rule 38
-
-
-state 55:
-
-	lvalue : lvalue LBRACK expr . RBRACK 
-
-	RBRACK	shift 75
-
-
-	.	error
-
-
-state 56:
-
-	declaration : functionDeclaration .  (reduce by rule 44)
-
-
-
-	.	reduce by rule 44
-
-
 state 57:
 
-	declaration : variableDeclaration .  (reduce by rule 43)
+	declaration : functionDeclaration .  (reduce by rule 48)
 
 
 
-	.	reduce by rule 43
+	.	reduce by rule 48
 
 
 state 58:
 
-	declaration : typeDeclaration .  (reduce by rule 42)
+	declaration : variableDeclaration .  (reduce by rule 47)
 
 
 
-	.	reduce by rule 42
+	.	reduce by rule 47
 
 
 state 59:
 
-	declarationList : declarationList declaration .  (reduce by rule 41)
+	declaration : typeDeclaration .  (reduce by rule 46)
 
 
 
-	.	reduce by rule 41
+	.	reduce by rule 46
 
 
 state 60:
 
-	typeDeclaration : TYPE . ID EQ ty 
-
-	ID	shift 76
+	declarationList : declarationList declaration .  (reduce by rule 45)
 
 
-	.	error
+
+	.	reduce by rule 45
 
 
 state 61:
 
-	variableDeclaration : VAR . ID ASSIGN expr 
-	variableDeclaration : VAR . ID COLON ID ASSIGN expr 
-
-	ID	shift 77
-
-
-	.	error
-
-
-state 62:
-
-	functionDeclaration : FUNCTION . ID LPAREN RPAREN EQ expr 
-	functionDeclaration : FUNCTION . ID LPAREN typeFields RPAREN EQ expr 
-	functionDeclaration : FUNCTION . ID LPAREN RPAREN COLON ID EQ expr 
-	functionDeclaration : FUNCTION . ID LPAREN typeFields RPAREN COLON ID EQ expr 
+	typeDeclaration : TYPE . ID EQ ty 
 
 	ID	shift 78
 
@@ -1170,171 +1174,189 @@ state 62:
 	.	error
 
 
+state 62:
+
+	variableDeclaration : VAR . ID ASSIGN expr 
+	variableDeclaration : VAR . ID COLON ID ASSIGN expr 
+
+	ID	shift 79
+
+
+	.	error
+
+
 state 63:
 
-	expr : LET declarationList IN . exprSeq END 
+	functionDeclaration : FUNCTION . ID LPAREN RPAREN EQ expr 
+	functionDeclaration : FUNCTION . ID LPAREN typeFields RPAREN EQ expr 
+	functionDeclaration : FUNCTION . ID LPAREN RPAREN COLON ID EQ expr 
+	functionDeclaration : FUNCTION . ID LPAREN typeFields RPAREN COLON ID EQ expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 80
 
-	expr	goto 37
-	lvalue	goto 2
-	exprSeq	goto 79
-	opExpr	goto 1
 
 	.	error
 
 
 state 64:
 
-	expr : FOR ID ASSIGN . expr TO expr DO expr 
+	expr : LET declarationList IN . exprSeq END 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	expr	goto 80
-	lvalue	goto 2
-	opExpr	goto 1
+	expr	goto 36
+	lvalue	goto 3
+	exprSeq	goto 81
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 65:
 
-	expr : WHILE expr DO . expr 
+	expr : FOR ID ASSIGN . expr TO expr DO expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	expr	goto 81
-	lvalue	goto 2
-	opExpr	goto 1
+	expr	goto 82
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 66:
 
-	expr : IF expr THEN . expr 
-	expr : IF expr THEN . expr ELSE expr 
+	expr : WHILE expr DO . expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	expr	goto 82
-	lvalue	goto 2
-	opExpr	goto 1
+	expr	goto 83
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 67:
 
-	opExpr : LPAREN exprSeq RPAREN .  (reduce by rule 15)
+	expr : IF expr THEN . expr 
+	expr : IF expr THEN . expr ELSE expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 84
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
-	.	reduce by rule 15
+	.	error
 
 
 state 68:
 
-	exprSeq : exprSeq SEMICOLON . expr 
+	idTail : lvalTail .  (reduce by rule 33)
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
 
-	expr	goto 83
-	lvalue	goto 2
-	opExpr	goto 1
 
-	.	error
+	.	reduce by rule 33
 
 
 state 69:
 
-	fieldList : fieldList . COMMA ID EQ expr 
-	opExpr : ID LBRACE fieldList . RBRACE 
-
-	COMMA	shift 85
-	RBRACE	shift 84
+	primary : LPAREN exprSeq RPAREN .  (reduce by rule 27)
 
 
-	.	error
+
+	.	reduce by rule 27
 
 
 state 70:
 
-	fieldList : ID . EQ expr 
+	exprSeq : exprSeq SEMICOLON . expr 
 
-	EQ	shift 86
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 85
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 71:
 
-	opExpr : ID LBRACK expr . RBRACK OF expr 
+	lvalTail : DOT ID . lvalTail 
 
-	RBRACK	shift 87
+	LBRACK	shift 87
+	DOT	shift 40
 
+	lvalTail	goto 86
 
-	.	error
+	.	reduce by rule 41
 
 
 state 72:
 
-	exprList : exprList . COMMA expr 
-	opExpr : ID LPAREN exprList . RPAREN 
+	fieldList : fieldList . COMMA ID EQ expr 
+	idTail : LBRACE fieldList . RBRACE 
 
 	COMMA	shift 89
-	RPAREN	shift 88
+	RBRACE	shift 88
 
 
 	.	error
@@ -1342,34 +1364,7 @@ state 72:
 
 state 73:
 
-	exprList : expr .  (reduce by rule 33)
-
-
-
-	.	reduce by rule 33
-
-
-state 74:
-
-	opExpr : ID LPAREN RPAREN .  (reduce by rule 13)
-
-
-
-	.	reduce by rule 13
-
-
-state 75:
-
-	lvalue : lvalue LBRACK expr RBRACK .  (reduce by rule 39)
-
-
-
-	.	reduce by rule 39
-
-
-state 76:
-
-	typeDeclaration : TYPE ID . EQ ty 
+	fieldList : ID . EQ expr 
 
 	EQ	shift 90
 
@@ -1377,26 +1372,52 @@ state 76:
 	.	error
 
 
-state 77:
+state 74:
 
-	variableDeclaration : VAR ID . ASSIGN expr 
-	variableDeclaration : VAR ID . COLON ID ASSIGN expr 
+	idTail : LBRACK expr . RBRACK OF expr 
+	lvalTail : LBRACK expr . RBRACK lvalTail 
 
-	COLON	shift 92
-	ASSIGN	shift 91
+	RBRACK	shift 91
 
 
 	.	error
 
 
+state 75:
+
+	exprList : exprList . COMMA expr 
+	idTail : LPAREN exprList . RPAREN 
+
+	COMMA	shift 93
+	RPAREN	shift 92
+
+
+	.	error
+
+
+state 76:
+
+	exprList : expr .  (reduce by rule 36)
+
+
+
+	.	reduce by rule 36
+
+
+state 77:
+
+	idTail : LPAREN RPAREN .  (reduce by rule 29)
+
+
+
+	.	reduce by rule 29
+
+
 state 78:
 
-	functionDeclaration : FUNCTION ID . LPAREN RPAREN EQ expr 
-	functionDeclaration : FUNCTION ID . LPAREN typeFields RPAREN EQ expr 
-	functionDeclaration : FUNCTION ID . LPAREN RPAREN COLON ID EQ expr 
-	functionDeclaration : FUNCTION ID . LPAREN typeFields RPAREN COLON ID EQ expr 
+	typeDeclaration : TYPE ID . EQ ty 
 
-	LPAREN	shift 93
+	EQ	shift 94
 
 
 	.	error
@@ -1404,11 +1425,11 @@ state 78:
 
 state 79:
 
-	expr : LET declarationList IN exprSeq . END 
-	exprSeq : exprSeq . SEMICOLON expr 
+	variableDeclaration : VAR ID . ASSIGN expr 
+	variableDeclaration : VAR ID . COLON ID ASSIGN expr 
 
-	SEMICOLON	shift 68
-	END	shift 94
+	COLON	shift 96
+	ASSIGN	shift 95
 
 
 	.	error
@@ -1416,9 +1437,12 @@ state 79:
 
 state 80:
 
-	expr : FOR ID ASSIGN expr . TO expr DO expr 
+	functionDeclaration : FUNCTION ID . LPAREN RPAREN EQ expr 
+	functionDeclaration : FUNCTION ID . LPAREN typeFields RPAREN EQ expr 
+	functionDeclaration : FUNCTION ID . LPAREN RPAREN COLON ID EQ expr 
+	functionDeclaration : FUNCTION ID . LPAREN typeFields RPAREN COLON ID EQ expr 
 
-	TO	shift 95
+	LPAREN	shift 97
 
 
 	.	error
@@ -1426,181 +1450,243 @@ state 80:
 
 state 81:
 
+	expr : LET declarationList IN exprSeq . END 
+	exprSeq : exprSeq . SEMICOLON expr 
+
+	SEMICOLON	shift 70
+	END	shift 98
+
+
+	.	error
+
+
+state 82:
+
+	expr : FOR ID ASSIGN expr . TO expr DO expr 
+
+	TO	shift 99
+
+
+	.	error
+
+
+state 83:
+
 	expr : WHILE expr DO expr .  (reduce by rule 5)
 
 
 
 	.	reduce by rule 5
 
-error:  state 82: shift/reduce conflict (shift ELSE, reduce by rule 3)
+error:  state 84: shift/reduce conflict (shift ELSE, reduce by rule 3)
 
-state 82:
+state 84:
 
 	expr : IF expr THEN expr .  (reduce by rule 3)
 	expr : IF expr THEN expr . ELSE expr 
 
-	ELSE	shift 96
+	ELSE	shift 100
 
 
 	.	reduce by rule 3
 
 
-state 83:
-
-	exprSeq : exprSeq SEMICOLON expr .  (reduce by rule 32)
-
-
-
-	.	reduce by rule 32
-
-
-state 84:
-
-	opExpr : ID LBRACE fieldList RBRACE .  (reduce by rule 16)
-
-
-
-	.	reduce by rule 16
-
-
 state 85:
 
-	fieldList : fieldList COMMA . ID EQ expr 
-
-	ID	shift 97
+	exprSeq : exprSeq SEMICOLON expr .  (reduce by rule 35)
 
 
-	.	error
+
+	.	reduce by rule 35
 
 
 state 86:
 
-	fieldList : ID EQ . expr 
+	lvalTail : DOT ID lvalTail .  (reduce by rule 42)
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
 
-	expr	goto 98
-	lvalue	goto 2
-	opExpr	goto 1
 
-	.	error
+	.	reduce by rule 42
 
 
 state 87:
 
-	opExpr : ID LBRACK expr RBRACK . OF expr 
+	lvalTail : LBRACK . expr RBRACK lvalTail 
 
-	OF	shift 99
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 101
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 88:
 
-	opExpr : ID LPAREN exprList RPAREN .  (reduce by rule 14)
+	idTail : LBRACE fieldList RBRACE .  (reduce by rule 31)
 
 
 
-	.	reduce by rule 14
+	.	reduce by rule 31
 
 
 state 89:
 
-	exprList : exprList COMMA . expr 
+	fieldList : fieldList COMMA . ID EQ expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 102
 
-	expr	goto 100
-	lvalue	goto 2
-	opExpr	goto 1
 
 	.	error
 
 
 state 90:
 
-	typeDeclaration : TYPE ID EQ . ty 
+	fieldList : ID EQ . expr 
 
-	ID	shift 104
-	LBRACE	shift 103
-	ARRAY	shift 102
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	ty	goto 101
+	expr	goto 103
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 91:
 
-	variableDeclaration : VAR ID ASSIGN . expr 
+	idTail : LBRACK expr RBRACK . OF expr 
+	lvalTail : LBRACK expr RBRACK . lvalTail 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	LBRACK	shift 87
+	DOT	shift 40
+	OF	shift 105
 
-	expr	goto 105
-	lvalue	goto 2
-	opExpr	goto 1
+	lvalTail	goto 104
 
-	.	error
+	.	reduce by rule 41
 
 
 state 92:
 
+	idTail : LPAREN exprList RPAREN .  (reduce by rule 30)
+
+
+
+	.	reduce by rule 30
+
+
+state 93:
+
+	exprList : exprList COMMA . expr 
+
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
+
+	expr	goto 106
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
+
+	.	error
+
+
+state 94:
+
+	typeDeclaration : TYPE ID EQ . ty 
+
+	ID	shift 110
+	LBRACE	shift 109
+	ARRAY	shift 108
+
+	ty	goto 107
+
+	.	error
+
+
+state 95:
+
+	variableDeclaration : VAR ID ASSIGN . expr 
+
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
+
+	expr	goto 111
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
+
+	.	error
+
+
+state 96:
+
 	variableDeclaration : VAR ID COLON . ID ASSIGN expr 
 
-	ID	shift 106
+	ID	shift 112
 
 
 	.	error
 
 
-state 93:
+state 97:
 
 	functionDeclaration : FUNCTION ID LPAREN . RPAREN EQ expr 
 	functionDeclaration : FUNCTION ID LPAREN . typeFields RPAREN EQ expr 
 	functionDeclaration : FUNCTION ID LPAREN . RPAREN COLON ID EQ expr 
 	functionDeclaration : FUNCTION ID LPAREN . typeFields RPAREN COLON ID EQ expr 
 
-	ID	shift 110
-	RPAREN	shift 109
+	ID	shift 116
+	RPAREN	shift 115
 
-	typeFields	goto 108
-	typeField	goto 107
+	typeFields	goto 114
+	typeField	goto 113
 
 	.	error
 
 
-state 94:
+state 98:
 
 	expr : LET declarationList IN exprSeq END .  (reduce by rule 8)
 
@@ -1609,117 +1695,69 @@ state 94:
 	.	reduce by rule 8
 
 
-state 95:
+state 99:
 
 	expr : FOR ID ASSIGN expr TO . expr DO expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-	expr	goto 111
-	lvalue	goto 2
-	opExpr	goto 1
-
-	.	error
-
-
-state 96:
-
-	expr : IF expr THEN expr ELSE . expr 
-
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
-
-	expr	goto 112
-	lvalue	goto 2
-	opExpr	goto 1
-
-	.	error
-
-
-state 97:
-
-	fieldList : fieldList COMMA ID . EQ expr 
-
-	EQ	shift 113
-
-
-	.	error
-
-
-state 98:
-
-	fieldList : ID EQ expr .  (reduce by rule 35)
-
-
-
-	.	reduce by rule 35
-
-
-state 99:
-
-	opExpr : ID LBRACK expr RBRACK OF . expr 
-
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
-
-	expr	goto 114
-	lvalue	goto 2
-	opExpr	goto 1
+	expr	goto 117
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 100:
 
-	exprList : exprList COMMA expr .  (reduce by rule 34)
+	expr : IF expr THEN expr ELSE . expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 118
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
-	.	reduce by rule 34
+	.	error
 
 
 state 101:
 
-	typeDeclaration : TYPE ID EQ ty .  (reduce by rule 45)
+	lvalTail : LBRACK expr . RBRACK lvalTail 
+
+	RBRACK	shift 119
 
 
-
-	.	reduce by rule 45
+	.	error
 
 
 state 102:
 
-	ty : ARRAY . OF ID 
+	fieldList : fieldList COMMA ID . EQ expr 
 
-	OF	shift 115
+	EQ	shift 120
 
 
 	.	error
@@ -1727,47 +1765,58 @@ state 102:
 
 state 103:
 
-	ty : LBRACE . typeFields RBRACE 
+	fieldList : ID EQ expr .  (reduce by rule 38)
 
-	ID	shift 110
 
-	typeFields	goto 116
-	typeField	goto 107
 
-	.	error
+	.	reduce by rule 38
 
 
 state 104:
 
-	ty : ID .  (reduce by rule 46)
+	lvalTail : LBRACK expr RBRACK lvalTail .  (reduce by rule 43)
 
 
 
-	.	reduce by rule 46
+	.	reduce by rule 43
 
 
 state 105:
 
-	variableDeclaration : VAR ID ASSIGN expr .  (reduce by rule 52)
+	idTail : LBRACK expr RBRACK OF . expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-
-	.	reduce by rule 52
-
-
-state 106:
-
-	variableDeclaration : VAR ID COLON ID . ASSIGN expr 
-
-	ASSIGN	shift 117
-
+	expr	goto 121
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
+state 106:
+
+	exprList : exprList COMMA expr .  (reduce by rule 37)
+
+
+
+	.	reduce by rule 37
+
+
 state 107:
 
-	typeFields : typeField .  (reduce by rule 49)
+	typeDeclaration : TYPE ID EQ ty .  (reduce by rule 49)
 
 
 
@@ -1776,12 +1825,9 @@ state 107:
 
 state 108:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields . RPAREN EQ expr 
-	functionDeclaration : FUNCTION ID LPAREN typeFields . RPAREN COLON ID EQ expr 
-	typeFields : typeFields . COMMA typeField 
+	ty : ARRAY . OF ID 
 
-	COMMA	shift 119
-	RPAREN	shift 118
+	OF	shift 122
 
 
 	.	error
@@ -1789,37 +1835,99 @@ state 108:
 
 state 109:
 
-	functionDeclaration : FUNCTION ID LPAREN RPAREN . EQ expr 
-	functionDeclaration : FUNCTION ID LPAREN RPAREN . COLON ID EQ expr 
+	ty : LBRACE . typeFields RBRACE 
 
-	COLON	shift 121
-	EQ	shift 120
+	ID	shift 116
 
+	typeFields	goto 123
+	typeField	goto 113
 
 	.	error
 
 
 state 110:
 
-	typeField : ID . COLON ID 
-
-	COLON	shift 122
+	ty : ID .  (reduce by rule 50)
 
 
-	.	error
+
+	.	reduce by rule 50
 
 
 state 111:
 
-	expr : FOR ID ASSIGN expr TO expr . DO expr 
+	variableDeclaration : VAR ID ASSIGN expr .  (reduce by rule 56)
 
-	DO	shift 123
+
+
+	.	reduce by rule 56
+
+
+state 112:
+
+	variableDeclaration : VAR ID COLON ID . ASSIGN expr 
+
+	ASSIGN	shift 124
 
 
 	.	error
 
 
-state 112:
+state 113:
+
+	typeFields : typeField .  (reduce by rule 53)
+
+
+
+	.	reduce by rule 53
+
+
+state 114:
+
+	functionDeclaration : FUNCTION ID LPAREN typeFields . RPAREN EQ expr 
+	functionDeclaration : FUNCTION ID LPAREN typeFields . RPAREN COLON ID EQ expr 
+	typeFields : typeFields . COMMA typeField 
+
+	COMMA	shift 126
+	RPAREN	shift 125
+
+
+	.	error
+
+
+state 115:
+
+	functionDeclaration : FUNCTION ID LPAREN RPAREN . EQ expr 
+	functionDeclaration : FUNCTION ID LPAREN RPAREN . COLON ID EQ expr 
+
+	COLON	shift 128
+	EQ	shift 127
+
+
+	.	error
+
+
+state 116:
+
+	typeField : ID . COLON ID 
+
+	COLON	shift 129
+
+
+	.	error
+
+
+state 117:
+
+	expr : FOR ID ASSIGN expr TO expr . DO expr 
+
+	DO	shift 130
+
+
+	.	error
+
+
+state 118:
 
 	expr : IF expr THEN expr ELSE expr .  (reduce by rule 4)
 
@@ -1828,132 +1936,54 @@ state 112:
 	.	reduce by rule 4
 
 
-state 113:
-
-	fieldList : fieldList COMMA ID EQ . expr 
-
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
-
-	expr	goto 124
-	lvalue	goto 2
-	opExpr	goto 1
-
-	.	error
-
-
-state 114:
-
-	opExpr : ID LBRACK expr RBRACK OF expr .  (reduce by rule 17)
-
-
-
-	.	reduce by rule 17
-
-
-state 115:
-
-	ty : ARRAY OF . ID 
-
-	ID	shift 125
-
-
-	.	error
-
-
-state 116:
-
-	ty : LBRACE typeFields . RBRACE 
-	typeFields : typeFields . COMMA typeField 
-
-	COMMA	shift 119
-	RBRACE	shift 126
-
-
-	.	error
-
-
-state 117:
-
-	variableDeclaration : VAR ID COLON ID ASSIGN . expr 
-
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
-
-	expr	goto 127
-	lvalue	goto 2
-	opExpr	goto 1
-
-	.	error
-
-
-state 118:
-
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN . EQ expr 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN . COLON ID EQ expr 
-
-	COLON	shift 129
-	EQ	shift 128
-
-
-	.	error
-
-
 state 119:
 
-	typeFields : typeFields COMMA . typeField 
+	lvalTail : LBRACK expr RBRACK . lvalTail 
 
-	ID	shift 110
+	LBRACK	shift 87
+	DOT	shift 40
 
-	typeField	goto 130
+	lvalTail	goto 104
 
-	.	error
+	.	reduce by rule 41
 
 
 state 120:
 
-	functionDeclaration : FUNCTION ID LPAREN RPAREN EQ . expr 
+	fieldList : fieldList COMMA ID EQ . expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
 	expr	goto 131
-	lvalue	goto 2
-	opExpr	goto 1
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
 state 121:
 
-	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON . ID EQ expr 
+	idTail : LBRACK expr RBRACK OF expr .  (reduce by rule 32)
+
+
+
+	.	reduce by rule 32
+
+
+state 122:
+
+	ty : ARRAY OF . ID 
 
 	ID	shift 132
 
@@ -1961,103 +1991,104 @@ state 121:
 	.	error
 
 
-state 122:
-
-	typeField : ID COLON . ID 
-
-	ID	shift 133
-
-
-	.	error
-
-
 state 123:
 
-	expr : FOR ID ASSIGN expr TO expr DO . expr 
+	ty : LBRACE typeFields . RBRACE 
+	typeFields : typeFields . COMMA typeField 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	COMMA	shift 126
+	RBRACE	shift 133
 
-	expr	goto 134
-	lvalue	goto 2
-	opExpr	goto 1
 
 	.	error
 
 
 state 124:
 
-	fieldList : fieldList COMMA ID EQ expr .  (reduce by rule 36)
+	variableDeclaration : VAR ID COLON ID ASSIGN . expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 134
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
-	.	reduce by rule 36
+	.	error
 
 
 state 125:
 
-	ty : ARRAY OF ID .  (reduce by rule 48)
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN . EQ expr 
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN . COLON ID EQ expr 
+
+	COLON	shift 136
+	EQ	shift 135
 
 
-
-	.	reduce by rule 48
+	.	error
 
 
 state 126:
 
-	ty : LBRACE typeFields RBRACE .  (reduce by rule 47)
+	typeFields : typeFields COMMA . typeField 
 
+	ID	shift 116
 
+	typeField	goto 137
 
-	.	reduce by rule 47
+	.	error
 
 
 state 127:
 
-	variableDeclaration : VAR ID COLON ID ASSIGN expr .  (reduce by rule 53)
+	functionDeclaration : FUNCTION ID LPAREN RPAREN EQ . expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 138
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
-	.	reduce by rule 53
+	.	error
 
 
 state 128:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN EQ . expr 
+	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON . ID EQ expr 
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
+	ID	shift 139
 
-	expr	goto 135
-	lvalue	goto 2
-	opExpr	goto 1
 
 	.	error
 
 
 state 129:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON . ID EQ expr 
+	typeField : ID COLON . ID 
 
-	ID	shift 136
+	ID	shift 140
 
 
 	.	error
@@ -2065,35 +2096,49 @@ state 129:
 
 state 130:
 
-	typeFields : typeFields COMMA typeField .  (reduce by rule 50)
+	expr : FOR ID ASSIGN expr TO expr DO . expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
-
-	.	reduce by rule 50
-
-
-state 131:
-
-	functionDeclaration : FUNCTION ID LPAREN RPAREN EQ expr .  (reduce by rule 54)
-
-
-
-	.	reduce by rule 54
-
-
-state 132:
-
-	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON ID . EQ expr 
-
-	EQ	shift 137
-
+	expr	goto 141
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
 	.	error
 
 
+state 131:
+
+	fieldList : fieldList COMMA ID EQ expr .  (reduce by rule 39)
+
+
+
+	.	reduce by rule 39
+
+
+state 132:
+
+	ty : ARRAY OF ID .  (reduce by rule 52)
+
+
+
+	.	reduce by rule 52
+
+
 state 133:
 
-	typeField : ID COLON ID .  (reduce by rule 51)
+	ty : LBRACE typeFields RBRACE .  (reduce by rule 51)
 
 
 
@@ -2102,27 +2147,42 @@ state 133:
 
 state 134:
 
-	expr : FOR ID ASSIGN expr TO expr DO expr .  (reduce by rule 6)
+	variableDeclaration : VAR ID COLON ID ASSIGN expr .  (reduce by rule 57)
 
 
 
-	.	reduce by rule 6
+	.	reduce by rule 57
 
 
 state 135:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN EQ expr .  (reduce by rule 55)
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN EQ . expr 
 
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
 
+	expr	goto 142
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
 
-	.	reduce by rule 55
+	.	error
 
 
 state 136:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON ID . EQ expr 
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON . ID EQ expr 
 
-	EQ	shift 138
+	ID	shift 143
 
 
 	.	error
@@ -2130,69 +2190,136 @@ state 136:
 
 state 137:
 
-	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON ID EQ . expr 
+	typeFields : typeFields COMMA typeField .  (reduce by rule 54)
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
 
-	expr	goto 139
-	lvalue	goto 2
-	opExpr	goto 1
 
-	.	error
+	.	reduce by rule 54
 
 
 state 138:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ . expr 
+	functionDeclaration : FUNCTION ID LPAREN RPAREN EQ expr .  (reduce by rule 58)
 
-	ID	shift 14
-	INT	shift 13
-	STRING	shift 12
-	LPAREN	shift 11
-	MINUS	shift 10
-	IF	shift 9
-	WHILE	shift 8
-	FOR	shift 7
-	LET	shift 6
-	BREAK	shift 5
-	NIL	shift 4
 
-	expr	goto 140
-	lvalue	goto 2
-	opExpr	goto 1
 
-	.	error
+	.	reduce by rule 58
 
 
 state 139:
 
-	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON ID EQ expr .  (reduce by rule 56)
+	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON ID . EQ expr 
+
+	EQ	shift 144
 
 
-
-	.	reduce by rule 56
+	.	error
 
 
 state 140:
 
-	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ expr .  (reduce by rule 57)
+	typeField : ID COLON ID .  (reduce by rule 55)
 
 
 
-	.	reduce by rule 57
+	.	reduce by rule 55
 
 
 state 141:
+
+	expr : FOR ID ASSIGN expr TO expr DO expr .  (reduce by rule 6)
+
+
+
+	.	reduce by rule 6
+
+
+state 142:
+
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN EQ expr .  (reduce by rule 59)
+
+
+
+	.	reduce by rule 59
+
+
+state 143:
+
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON ID . EQ expr 
+
+	EQ	shift 145
+
+
+	.	error
+
+
+state 144:
+
+	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON ID EQ . expr 
+
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
+
+	expr	goto 146
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
+
+	.	error
+
+
+state 145:
+
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ . expr 
+
+	ID	shift 15
+	INT	shift 14
+	STRING	shift 13
+	LPAREN	shift 12
+	MINUS	shift 11
+	IF	shift 10
+	WHILE	shift 9
+	FOR	shift 8
+	LET	shift 7
+	BREAK	shift 6
+	NIL	shift 5
+
+	expr	goto 147
+	lvalue	goto 3
+	opExpr	goto 2
+	primary	goto 1
+
+	.	error
+
+
+state 146:
+
+	functionDeclaration : FUNCTION ID LPAREN RPAREN COLON ID EQ expr .  (reduce by rule 60)
+
+
+
+	.	reduce by rule 60
+
+
+state 147:
+
+	functionDeclaration : FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ expr .  (reduce by rule 61)
+
+
+
+	.	reduce by rule 61
+
+
+state 148:
 
 
 	EOF	accept
@@ -2200,5 +2327,5 @@ state 141:
 
 	.	error
 
-259 of 738 action table entries left after compaction
-120 goto table entries
+300 of 781 action table entries left after compaction
+153 goto table entries
