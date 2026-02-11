@@ -1,3 +1,4 @@
+/* A program to solve the 8-queens problem */
 
 let
     var N := 8
@@ -17,7 +18,7 @@ let
          print("\n"))
 
     function try(c:int) = 
-( 
+( /*  for i:= 0 to c do print("."); print("\n"); flush();*/
      if c=N
      then printboard()
      else for r := 0 to N-1
@@ -30,3 +31,4 @@ let
 )
  in try(0)
 end
+	
