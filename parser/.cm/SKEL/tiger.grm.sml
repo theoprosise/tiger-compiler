@@ -1,3 +1,2 @@
 Skeleton 5
-ae"TigerLrValsFun"i2aä¢Token"gp1c"TOKEN"f2d"Symbol"ÿjh2aä¢ParserData"h7aä¢Header"h1aä¢A"gp1d"Absyn"aä¢LrTable"gp2ÿÿ%Caÿgp1ÿbåçğ±ÿ%f6d"Char"Cÿ%d"List"d"General"d"String"d"Array"Nbåçğ±ÿ	d2f1ÿaä¢MlyValue"è0ad"EC"h2ÿ‚bÿ‚9æ±ÿƒad"Actions"h2bÿ‚9f3ÿ%ÿÿƒÿƒ$Naä¢Tokens"jÿƒçğ±ã¢Tiger_TOKENS"h2aÿ9gp1c"PARSER_DATA"aÿ„
-ÿ„
+ae"TigerLrValsFun"i2aä¢Token"gp1c"TOKEN"f3d"ErrorMsg"d"Symbol"ÿjh2aä¢ParserData"h7aä¢Header"h1aä¢A"gp1d"Absyn"aä¢LrTable"gp2ÿÿ0Caÿgp1ÿbåçğ±ÿ0f6d"Char"Cÿ0d"List"d"General"d"String"d"Array"Nbåçğ±ÿd2f1ÿ aä¢MlyValue"è0ad"EC"h2ÿ‚bÿƒæ±ÿƒad"Actions"h2bÿƒf3ÿ0ÿ ÿƒÿƒ/Naä¢Tokens"jÿƒçğ±ã¢Tiger_TOKENS"h2aÿgp1c"PARSER_DATA"aÿ„ÿ„"

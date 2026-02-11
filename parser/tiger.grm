@@ -7,7 +7,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
 fun hasDupSym (xs : A.symbol list) : bool =
   let
     fun mem (x, []) = false
-      | mem (x, y::ys) = Symbol.eq(x,y) orelse mem(x, ys)
+      | mem (x, y::ys) = (x = y) orelse mem(x, ys)
     fun go (seen, []) = false
       | go (seen, x::rest) =
           if mem(x, seen) then true else go(x::seen, rest)
@@ -18,8 +18,10 @@ fun hasDupSym (xs : A.symbol list) : bool =
 fun errDup (pos:int) (what:string) =
   ErrorMsg.error pos ("duplicate " ^ what ^ " name in mutually recursive declaration sequence")
 
+type typedec_rec = {name: A.symbol, ty: A.ty, pos: A.pos}
+
 (* collect a maximal run of consecutive TypeDecs, concatenating their lists *)
-fun collectTypeRun (ds : A.dec list) : (A.typedec list * A.dec list) =
+fun collectTypeRun (ds : A.dec list) : (typedec_rec list * A.dec list) =
   case ds of
       A.TypeDec tds :: rest =>
         let val (more, rest') = collectTypeRun rest

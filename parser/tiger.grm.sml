@@ -10,6 +10,74 @@ structure Header =
 struct
 structure A = Absyn
 fun symMod (s:string) : A.symbol = Symbol.symbol s
+
+(* --- helpers for "fixup" grouping of mutually recursive dec runs --- *)
+
+(* list-based duplicate check (no extra libraries) *)
+fun hasDupSym (xs : A.symbol list) : bool =
+  let
+    fun mem (x, []) = false
+      | mem (x, y::ys) = (x = y) orelse mem(x, ys)
+    fun go (seen, []) = false
+      | go (seen, x::rest) =
+          if mem(x, seen) then true else go(x::seen, rest)
+  in
+    go ([], xs)
+  end
+
+fun errDup (pos:int) (what:string) =
+  ErrorMsg.error pos ("duplicate " ^ what ^ " name in mutually recursive declaration sequence")
+
+type typedec_rec = {name: A.symbol, ty: A.ty, pos: A.pos}
+
+(* collect a maximal run of consecutive TypeDecs, concatenating their lists *)
+fun collectTypeRun (ds : A.dec list) : (typedec_rec list * A.dec list) =
+  case ds of
+      A.TypeDec tds :: rest =>
+        let val (more, rest') = collectTypeRun rest
+        in (tds @ more, rest') end
+    | _ => ([], ds)
+
+(* collect a maximal run of consecutive FunctionDecs *)
+fun collectFunRun (ds : A.dec list) : (A.fundec list * A.dec list) =
+  case ds of
+      A.FunctionDec fds :: rest =>
+        let val (more, rest') = collectFunRun rest
+        in (fds @ more, rest') end
+    | _ => ([], ds)
+
+(* main fixup: group consecutive type/function singletons into one node each *)
+fun fixUp (ds : A.dec list) : A.dec list =
+  let
+    fun loop ([], acc) = rev acc
+      | loop (d::rest, acc) =
+          (case d of
+             A.TypeDec _ =>
+               let
+                 val (tds, rest') = collectTypeRun (d::rest)
+                 val names = map (fn {name, ty, pos} => name) tds
+                 val pos0  = (case tds of [] => 0 | {pos,...}::_ => pos)
+                 val _     = if hasDupSym names then errDup pos0 "type" else ()
+               in
+                 loop (rest', A.TypeDec tds :: acc)
+               end
+
+           | A.FunctionDec _ =>
+               let
+                 val (fds, rest') = collectFunRun (d::rest)
+                 val names = map (fn {name, params, result, body, pos} => name) fds
+                 val pos0  = (case fds of [] => 0 | {pos,...}::_ => pos)
+                 val _     = if hasDupSym names then errDup pos0 "function" else ()
+               in
+                 loop (rest', A.FunctionDec fds :: acc)
+               end
+
+           | _ =>
+               loop (rest, d :: acc))
+  in
+    loop (ds, [])
+  end
+
 (* user declarations *)
 (* You can define values available in the semantic actions of the rules in the user declarations section. It is recommended that you keep the size of this section as small as possible and place large blocks of code in other modules. *)
 
@@ -602,8 +670,8 @@ result = MlyValue.expr (fn _ => let val  (declarationList as
 declarationList1) = declarationList1 ()
  val  (exprSeq as exprSeq1) = exprSeq1 ()
  in (
-A.LetExp{decs=declarationList, body=A.SeqExp exprSeq, pos=LETleft})
-
+A.LetExp{decs= fixUp declarationList, body=A.SeqExp exprSeq, pos=LETleft}
+)
 end)
  in ( LrTable.NT 1, ( result, LET1left, END1right), rest671)
 end
@@ -730,8 +798,8 @@ end
  _, (MINUSleft as MINUS1left), _)) :: rest671)) => let val  result = 
 MlyValue.opExpr (fn _ => let val  (opExpr as opExpr1) = opExpr1 ()
  in (
-A.OpExp{left=A.IntExp 0, oper=A.MinusOp, right=opExpr, pos=MINUSleft})
-
+A.OpExp{left=A.IntExp(0), oper=A.MinusOp, right=opExpr, pos=MINUSleft}
+)
 end)
  in ( LrTable.NT 14, ( result, MINUS1left, opExpr1right), rest671)
 end
@@ -997,9 +1065,9 @@ rest671)
 end
 |  ( 51, ( ( _, ( MlyValue.ID ID2, _, ID2right)) :: _ :: ( _, ( 
 MlyValue.ID ID1, (IDleft as ID1left), _)) :: rest671)) => let val  
-result = MlyValue.typeField (fn _ => let val  (ID as ID1) = ID1 ()
+result = MlyValue.typeField (fn _ => let val  ID1 = ID1 ()
  val  ID2 = ID2 ()
- in ({name=symMod ID, escape=ref false, typ=symMod ID1, pos=IDleft})
+ in ({name=symMod ID1, escape=ref false, typ=symMod ID2, pos=IDleft})
 
 end)
  in ( LrTable.NT 13, ( result, ID1left, ID2right), rest671)
