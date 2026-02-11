@@ -25,6 +25,7 @@ fun symMod (s:string) : A.symbol = Symbol.symbol s
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
   | LOW
+  | UMINUS
 
 (* our non-terminal symbols - add any new ones here *)
 %nonterm program of A.exp
@@ -118,13 +119,15 @@ opExpr:
   | opExpr MINUS opExpr (A.OpExp{left=opExpr1, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
   | opExpr TIMES opExpr (A.OpExp{left=opExpr1, oper=A.TimesOp, right=opExpr2, pos=TIMESleft})
   | opExpr DIVIDE opExpr (A.OpExp{left=opExpr1, oper=A.DivideOp, right=opExpr2, pos=DIVIDEleft})
-  | MINUS opExpr %prec UMINUS (A.OpExp{left=0, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
+  | MINUS opExpr %prec UMINUS (A.OpExp{left=A.IntExp 0, oper=A.MinusOp, right=opExpr, pos=MINUSleft})
   | opExpr EQ opExpr (A.OpExp{left=opExpr1, oper=A.EqOp, right=opExpr2, pos=EQleft})
   | opExpr NEQ opExpr (A.OpExp{left=opExpr1, oper=A.NeqOp, right=opExpr2, pos=NEQleft})
   | opExpr LT opExpr (A.OpExp{left=opExpr1, oper=A.LtOp, right=opExpr2, pos=LTleft})
   | opExpr LE opExpr (A.OpExp{left=opExpr1, oper=A.LeOp, right=opExpr2, pos=LEleft})
   | opExpr GT opExpr (A.OpExp{left=opExpr1, oper=A.GtOp, right=opExpr2, pos=GTleft})
   | opExpr GE opExpr (A.OpExp{left=opExpr1, oper=A.GeOp, right=opExpr2, pos=GEleft})
+  | opExpr AND opExpr (A.IfExp{ test=opExpr1, then'=opExpr2, else'=SOME(A.IntExp 0), pos=ANDleft })
+  | opExpr OR opExpr (A.IfExp{ test=opExpr1, then'=A.IntExp 1, else'=SOME opExpr2, pos=ORleft })
 
 
 exprSeq: 
