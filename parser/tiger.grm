@@ -1,9 +1,7 @@
 structure A = Absyn
 fun symMod (s:string) : A.symbol = Symbol.symbol s
 
-(* --- helpers for "fixup" grouping of mutually recursive dec runs --- *)
-
-(* list-based duplicate check (no extra libraries) *)
+(* check if there's a duplicate symbol*)
 fun hasDupSym (xs : A.symbol list) : bool =
   let
     fun mem (x, []) = false
@@ -16,11 +14,10 @@ fun hasDupSym (xs : A.symbol list) : bool =
   end
 
 fun errDup (pos:int) (what:string) =
-  ErrorMsg.error pos ("duplicate " ^ what ^ " name in mutually recursive declaration sequence")
+  ErrorMsg.error pos ("duplicate " ^ what ^ " name in a mutually recursive declaration sequence :(")
 
 type typedec_rec = {name: A.symbol, ty: A.ty, pos: A.pos}
 
-(* collect a maximal run of consecutive TypeDecs, concatenating their lists *)
 fun collectTypeRun (ds : A.dec list) : (typedec_rec list * A.dec list) =
   case ds of
       A.TypeDec tds :: rest =>
@@ -28,7 +25,6 @@ fun collectTypeRun (ds : A.dec list) : (typedec_rec list * A.dec list) =
         in (tds @ more, rest') end
     | _ => ([], ds)
 
-(* collect a maximal run of consecutive FunctionDecs *)
 fun collectFunRun (ds : A.dec list) : (A.fundec list * A.dec list) =
   case ds of
       A.FunctionDec fds :: rest =>
@@ -36,7 +32,7 @@ fun collectFunRun (ds : A.dec list) : (A.fundec list * A.dec list) =
         in (fds @ more, rest') end
     | _ => ([], ds)
 
-(* main fixup: group consecutive type/function singletons into one node each *)
+(* fixUp: mutual recursion is unlocked *)
 fun fixUp (ds : A.dec list) : A.dec list =
   let
     fun loop ([], acc) = rev acc
