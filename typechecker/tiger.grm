@@ -1,0 +1,276 @@
+structure A = Absyn
+fun symMod (s:string) : A.symbol = Symbol.symbol s
+
+(* check if there's a duplicate symbol*)
+fun hasDupSym (xs : A.symbol list) : bool =
+  let
+    fun mem (x, []) = false
+      | mem (x, y::ys) = (x = y) orelse mem(x, ys)
+    fun go (seen, []) = false
+      | go (seen, x::rest) =
+          if mem(x, seen) then true else go(x::seen, rest)
+  in
+    go ([], xs)
+  end
+
+fun errDup (pos:int) (what:string) =
+  ErrorMsg.error pos ("duplicate " ^ what ^ " name in a mutually recursive declaration sequence :(")
+
+type typedec_rec = {name: A.symbol, ty: A.ty, pos: A.pos}
+
+fun collectTypeRun (ds : A.dec list) : (typedec_rec list * A.dec list) =
+  case ds of
+      A.TypeDec tds :: rest =>
+        let val (more, rest') = collectTypeRun rest
+        in (tds @ more, rest') end
+    | _ => ([], ds)
+
+fun collectFunRun (ds : A.dec list) : (A.fundec list * A.dec list) =
+  case ds of
+      A.FunctionDec fds :: rest =>
+        let val (more, rest') = collectFunRun rest
+        in (fds @ more, rest') end
+    | _ => ([], ds)
+
+(* fixUp: mutual recursion is unlocked *)
+fun fixUp (ds : A.dec list) : A.dec list =
+  let
+    fun loop ([], acc) = rev acc
+      | loop (d::rest, acc) =
+          (case d of
+             A.TypeDec _ =>
+               let
+                 val (tds, rest') = collectTypeRun (d::rest)
+                 val names = map (fn {name, ty, pos} => name) tds
+                 val pos0  = (case tds of [] => 0 | {pos,...}::_ => pos)
+                 val _     = if hasDupSym names then errDup pos0 "type" else ()
+               in
+                 loop (rest', A.TypeDec tds :: acc)
+               end
+
+           | A.FunctionDec _ =>
+               let
+                 val (fds, rest') = collectFunRun (d::rest)
+                 val names = map (fn {name, params, result, body, pos} => name) fds
+                 val pos0  = (case fds of [] => 0 | {pos,...}::_ => pos)
+                 val _     = if hasDupSym names then errDup pos0 "function" else ()
+               in
+                 loop (rest', A.FunctionDec fds :: acc)
+               end
+
+           | _ =>
+               loop (rest, d :: acc))
+  in
+    loop (ds, [])
+  end
+
+(* user declarations *)
+(* You can define values available in the semantic actions of the rules in the user declarations section. It is recommended that you keep the size of this section as small as possible and place large blocks of code in other modules. *)
+%%
+(* ML-Yacc declarations *)
+(* You must declare the nonterminals and terminals and the types of the values associated with them there. You must also name the parser and declare the type of position values. You should specify the set of terminals which can follow the start symbol and the set of non-shiftable terminals. You may optionally declare precedences for terminals, make declarations that will improve error-recovery, and suppress the generation of default reductions in the parser. You may declare whether the parser generator should create a verbose description of the parser in a ``.desc'' file. This is useful for finding the causes of shift/reduce errors and other parsing conflicts. *)
+
+(* You may also declare whether the semantic actions are free of significant side-effects and always terminate. Normally, ML-Yacc delays the evaluation of semantic actions until the completion of a successful parse. This ensures that there will be no semantic actions to ``undo'' if a syntactic error-correction invalidates some semantic actions. If, however, the semantic actions are free of significant side-effects and always terminate, the results of semantic actions that are invalidated by a syntactic error-correction can always be safely ignored. *)
+
+(* Parsers run faster and need less memory when it is not necessary to delay the evaluation of semantic actions. You are encouraged to write semantic actions that are free of side-effects and always terminate and to declare this information to ML-Yacc. *)
+
+(* A semantic action is free of significant side-effects if it can be reexecuted a reasonably small number of times without affecting the result of a parse. (The reexecution occurs when the error-correcting parser is testing possible corrections to fix a syntax error, and the number of times reexecution occurs is roughly bounded, for each syntax error, by the number of terminals times the amount of lookahead permitted for the error-correcting parser). *)
+
+(* our terminal symbols *)
+%term
+    EOF 
+  | ID of string
+  | INT of int | STRING of string 
+  | COMMA | COLON | SEMICOLON | LPAREN | RPAREN | LBRACK | RBRACK 
+  | LBRACE | RBRACE | DOT 
+  | PLUS | MINUS | TIMES | DIVIDE | EQ | NEQ | LT | LE | GT | GE
+  | AND | OR | ASSIGN
+  | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
+  | BREAK | NIL
+  | FUNCTION | VAR | TYPE 
+  | LOW
+  | UMINUS
+
+(* our non-terminal symbols - add any new ones here *)
+%nonterm program of A.exp
+  | expr of A.exp
+  | lvalue of A.var
+  | exprList of A.exp list
+  | exprSeq of (A.exp * A.pos) list
+  | fieldList of (A.symbol * A.exp * A.pos) list
+  | declarationList of A.dec list
+  | declaration of A.dec
+  | typeDeclaration of A.dec
+  | variableDeclaration of A.dec
+  | functionDeclaration of A.dec
+  | ty of A.ty
+  | typeFields of A.field list
+  | typeField of A.field
+  | opExpr of A.exp
+  | primary of A.exp
+  | idTail of (A.symbol * A.pos -> A.exp)
+  | lvalTail of (A.var -> A.var)
+
+
+%pos int
+%verbose
+%start program
+(* You should specify the set of terminals that may follow the start symbol, also called end-of-parse symbols, using the %eop declaration. *)
+%eop EOF
+%noshift EOF
+
+%name Tiger
+
+%keyword WHILE FOR TO BREAK LET IN END FUNCTION VAR TYPE ARRAY IF THEN ELSE 
+	DO OF NIL
+
+%prefer THEN ELSE LPAREN
+
+%nonassoc LOW
+%nonassoc ASSIGN
+%left OR
+%left AND
+%nonassoc EQ NEQ LT LE GT GE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%right UMINUS
+
+%value ID ("bogus")
+%value INT (1)
+%value STRING ("")
+
+%%
+(* Rules *)
+(* This is a skeleton grammar file, meant to illustrate what kind of
+ * declarations are necessary above the %% mark.  Students are expected
+ *  to replace the two dummy productions below with an actual grammar. 
+ *)
+
+(* The rules section contains the context-free grammar productions and their associated semantic actions. *)
+
+(* A rule consists of a left hand side nonterminal, followed by a colon, followed by a list of right hand side clauses.
+
+The right hand side clauses should be separated by bars (``|''). Each clause consists of a list of nonterminal and terminal symbols, followed by an optional %prec declaration, and then followed by the code to be evaluated when the rule is reduced.
+
+The optional %prec consists of the keyword %prec followed by a terminal whose precedence should be used as the precedence of the rule.
+
+The values of those symbols on the right hand side which have values are available inside the code. Positions for all the symbols are also available. Each value has the general form {symbol name}{n+1}, where {n} is the number of occurrences of the symbol to the left of the symbol. If the symbol occurs only once in the rule, {symbol name} may also be used. The positions are given by {symbol name}{n+1}left and {symbol name}{n+1}right. where {n} is defined as before. The position for a null rhs of a production is assumed to be the leftmost position of the lookahead terminal which is causing the reduction. This position value is available in defaultPos.
+
+The value to which the code evaluates is used as the value of the nonterminal. The type of the value and the nonterminal must match. The value is ignored if the nonterminal has no value, but is still evaluated for side-effects. *)
+
+
+program	: expr	(expr)
+
+	
+expr:
+  opExpr %prec LOW (opExpr)
+  | lvalue ASSIGN expr (A.AssignExp{var=lvalue, exp=expr, pos=ASSIGNleft})
+  | IF expr THEN expr (A.IfExp{test=expr1, then'=expr2, else'=NONE, pos=IFleft})
+  | IF expr THEN expr ELSE expr (A.IfExp{test=expr1, then'=expr2, else'=SOME expr3, pos=IFleft})
+  | WHILE expr DO expr (A.WhileExp{test=expr1, body=expr2, pos=WHILEleft})
+  | FOR ID ASSIGN expr TO expr DO expr (A.ForExp{var=symMod ID, escape=ref false, lo=expr1, hi=expr2, body=expr3, pos=FORleft})
+  | BREAK (A.BreakExp BREAKleft)
+  | LET declarationList IN exprSeq END (A.LetExp{decs= fixUp declarationList, body=A.SeqExp exprSeq, pos=LETleft})
+
+opExpr:
+  primary (primary)
+  | opExpr PLUS opExpr (A.OpExp{left=opExpr1, oper=A.PlusOp, right=opExpr2, pos=PLUSleft})
+  | opExpr MINUS opExpr (A.OpExp{left=opExpr1, oper=A.MinusOp, right=opExpr2, pos=MINUSleft})
+  | opExpr TIMES opExpr (A.OpExp{left=opExpr1, oper=A.TimesOp, right=opExpr2, pos=TIMESleft})
+  | opExpr DIVIDE opExpr (A.OpExp{left=opExpr1, oper=A.DivideOp, right=opExpr2, pos=DIVIDEleft})
+  | MINUS opExpr %prec UMINUS (A.OpExp{left=A.IntExp(0), oper=A.MinusOp, right=opExpr, pos=MINUSleft})
+  | opExpr EQ opExpr (A.OpExp{left=opExpr1, oper=A.EqOp, right=opExpr2, pos=EQleft})
+  | opExpr NEQ opExpr (A.OpExp{left=opExpr1, oper=A.NeqOp, right=opExpr2, pos=NEQleft})
+  | opExpr LT opExpr (A.OpExp{left=opExpr1, oper=A.LtOp, right=opExpr2, pos=LTleft})
+  | opExpr LE opExpr (A.OpExp{left=opExpr1, oper=A.LeOp, right=opExpr2, pos=LEleft})
+  | opExpr GT opExpr (A.OpExp{left=opExpr1, oper=A.GtOp, right=opExpr2, pos=GTleft})
+  | opExpr GE opExpr (A.OpExp{left=opExpr1, oper=A.GeOp, right=opExpr2, pos=GEleft})
+  | opExpr AND opExpr (A.IfExp{ test=opExpr1, then'=opExpr2, else'=SOME(A.IntExp 0), pos=ANDleft })
+  | opExpr OR opExpr (A.IfExp{ test=opExpr1, then'=A.IntExp 1, else'=SOME opExpr2, pos=ORleft })
+
+primary:
+  STRING (A.StringExp(STRING, STRINGleft))
+  | INT (A.IntExp INT)
+  | NIL (A.NilExp)
+  | LPAREN RPAREN (A.SeqExp [])
+  | LPAREN exprSeq RPAREN (A.SeqExp exprSeq)
+  | ID idTail (idTail (symMod ID, IDleft))
+
+idTail:
+  (* call *)
+  LPAREN RPAREN
+  (fn (f, p) => A.CallExp{func=f, args=[], pos=p})
+  | LPAREN exprList RPAREN
+  (fn (f, p) => A.CallExp{func=f, args=exprList, pos=p})
+  (* record literal *)
+  | LBRACE fieldList RBRACE
+  (fn (t, p) => A.RecordExp{typ=t, fields=fieldList, pos=p})
+  (* array literal *)
+  | LBRACK expr RBRACK OF expr
+  (fn (t, p) => A.ArrayExp{typ=t, size=expr1, init=expr2, pos=p})
+  (* otherwise: it's an lvalue tail *)
+  | lvalTail
+  (fn (x, p) => A.VarExp (lvalTail (A.SimpleVar(x, p))))
+
+
+exprSeq: 
+  expr ([(expr, exprleft)])
+  | exprSeq SEMICOLON expr (exprSeq @ [(expr, exprleft)])
+
+exprList:
+  expr ([expr])
+  | exprList COMMA expr (exprList @ [expr])
+
+fieldList:
+  ID EQ expr ([(symMod ID, expr, IDleft)])
+  | fieldList COMMA ID EQ expr (fieldList @ [(symMod ID, expr, IDleft)])
+
+
+lvalue:
+  ID lvalTail
+  (let val base = A.SimpleVar(symMod ID, IDleft) in lvalTail base end)
+
+lvalTail:
+  (fn v => v)
+  | DOT ID lvalTail (fn v => lvalTail (A.FieldVar(v, symMod ID, IDleft)))
+  | LBRACK expr RBRACK lvalTail (fn v => lvalTail (A.SubscriptVar(v, expr, LBRACKleft)))
+
+
+declarationList: 
+  ([])
+  | declarationList declaration (declarationList @ [declaration])
+
+declaration:
+  typeDeclaration (typeDeclaration)
+  | variableDeclaration (variableDeclaration)
+  | functionDeclaration (functionDeclaration)
+
+typeDeclaration:
+  TYPE ID EQ ty (A.TypeDec([{name=symMod ID, ty=ty, pos=TYPEleft}]))
+
+ty:
+  ID (A.NameTy(symMod ID, IDleft))
+  | LBRACE typeFields RBRACE (A.RecordTy typeFields)
+  | ARRAY OF ID (A.ArrayTy(symMod ID, IDleft))
+
+typeFields:
+  typeField ([typeField])
+| typeFields COMMA typeField (typeFields @ [typeField])
+
+typeField: 
+ ID COLON ID ({name=symMod ID1, escape=ref false, typ=symMod ID2, pos=IDleft})
+
+
+variableDeclaration:
+  VAR ID ASSIGN expr (A.VarDec{name=symMod ID, escape=ref false, typ=NONE, init=expr, pos=VARleft})
+  | VAR ID COLON ID ASSIGN expr (A.VarDec{name=symMod ID1, escape=ref false, typ=SOME(symMod ID2, ID2left), init=expr, pos=VARleft})
+
+functionDeclaration:
+  FUNCTION ID LPAREN RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=NONE, body=expr, pos=FUNCTIONleft}]))
+  | FUNCTION ID LPAREN typeFields RPAREN EQ expr (A.FunctionDec([{name=symMod ID, params=typeFields, result=NONE, body=expr, pos=FUNCTIONleft} ]))
+  | FUNCTION ID LPAREN RPAREN COLON ID EQ expr (A.FunctionDec([{name=symMod ID, params=[], result=SOME(symMod ID2, ID2left), body=expr, pos=FUNCTIONleft}]))
+  | FUNCTION ID LPAREN typeFields RPAREN COLON ID EQ expr 
+  (A.FunctionDec ([{name=symMod ID, params=typeFields, result=SOME(symMod ID2, ID2left), body=expr, pos=FUNCTIONleft}]))
+
+
+

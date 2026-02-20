@@ -4,6 +4,15 @@ CM.make "sources.cm";
 Parse tokens on a file:
 Parse.parse "test.tig";
 
+Function to parse and print for a test file:
+fun dump file =
+  let val ast = Parse.parse file
+  in PrintAbsyn.print (TextIO.stdOut, ast)
+  end;
+
+dump "test.tig";
+
+
 Check positions:
 python3 show_positions.py test.tig
 
