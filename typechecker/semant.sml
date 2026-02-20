@@ -1,20 +1,21 @@
 structure A = Absyn
 structure TY = Types
 structure E = Env
+structure TR = Translate
+structure S = Symbol
 
 structure Semant = 
 struct 
 
 type venv = E.enventry S.table
-type tenv = ty S.table
-type expty = {ty:TY.ty}
+type tenv = TY.ty S.table
+type expty = {exp: TR.exp, ty: TY.ty}
 
-
-transVar : venv * tenv * Absyn.var -> expty
+(* transVar : venv * tenv * Absyn.var -> expty
 transExp : venv * tenv * Absyn.exp -> expty
 transDec : venv * tenv * Absyn.dec -> {venv: venv, tenv: tenv}
 transTy:          tenv * Absyn.ty -> Types.ty
-
+ *)
 
 fun actual_ty ty = 
     let 
@@ -60,29 +61,81 @@ fun assignable (dst, src) =
         | _ => sameType (d, s)
     end
 
+fun typeError (pos, msg) =
+    (ErrorMsg.error pos msg; {exp=(), ty=TY.BOTTOM})
 
+fun requireInt (t, pos) =
+    case actual_ty t of
+        TY.INT => ()
+        | TY.BOTTOM => ()
+        | _ => ErrorMsg.error pos "expected int"
 
-fun checkInt ({exp,yt}, pos) = ()
-fun transExp(venv,tenv) =
-    let fun trexp (A.OpExp{left,oper=A.PlusOp,right,pos}) =
-            (checkInt(trexp left, pos);
-             checkInt(trexp right, pos);
-             {exp=(),ty=Types.INT})
-      | trexp (A.RecordExp 
+fun requireAssignable (dst, src, pos) =
+    if assignable(dst, src) then ()
+    else ErrorMsg.error pos "type mismatch"
 
-and trvar (A.SimpleVar(id,pos)) =
-    (case Symbol.look(venv,id)
-      of SOME(E.VarEntry{ty}) =>
-         {exp=(), ty=actual_ty ty}
-       | NONE => (error pos ("undefined variable "
-                             ^ S.name id);
-                  {exp=(), ty=Types.INT}))
-  | trvar (A.FieldVar(v,id,pos)) = ...
-in trexp
-end
+fun transExp (venv, tenv, e) : expty =
+  let
+    fun trexp e : expty =
+      case e of
+          A.VarExp v => trvar v
+        | A.NilExp => {exp=(), ty=TY.NIL}
+        | A.IntExp _ => {exp=(), ty=TY.INT}
+        | A.StringExp _ => {exp=(), ty=TY.STRING}
 
-| trexp(A.LetExp{decs,body,pos}) =
-  let val {venv=venv',tenv=tenv'} =
-          transDecs(venv,tenv,decs)
-   in transExp(venv',tenv') body
+        | A.OpExp{left, oper=A.PlusOp, right, pos} =>
+            let
+              val {ty=tL, ...} = trexp left
+              val {ty=tR, ...} = trexp right
+              val _ = requireInt(tL, pos)
+              val _ = requireInt(tR, pos)
+            in
+              {exp=(), ty=TY.INT}
+            end
+        | _ => typeError(0, "expression form not implemented yet")
+
+    and trvar v : expty =
+      case v of
+          A.SimpleVar(id, pos) =>
+            (case S.look(venv, id) of
+                SOME (E.VarEntry {ty}) => {exp=(), ty=actual_ty ty}
+              | SOME _ => typeError(pos, "not a variable: " ^ S.name id)
+              | NONE => typeError(pos, "undefined variable " ^ S.name id))
+
+        | A.FieldVar(base, field, pos) =>
+            let
+              val {ty=tBase, ...} = trvar base
+            in
+              case actual_ty tBase of
+                TY.RECORD(fields, _) =>
+                  (case List.find (fn (s, _) => s = field) fields of
+                      SOME (_, fty) => {exp=(), ty=actual_ty fty}
+                    | NONE => typeError(pos, "no such field " ^ S.name field))
+              | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+              | _ => typeError(pos, "field access on non-record")
+            end
+
+        | A.SubscriptVar(base, idx, pos) =>
+            let
+              val {ty=tBase, ...} = trvar base
+              val {ty=tIdx, ...}  = trexp idx
+              val _ = requireInt(tIdx, pos)
+            in
+              case actual_ty tBase of
+                TY.ARRAY(elemTy, _) => {exp=(), ty=actual_ty elemTy}
+              | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+              | _ => typeError(pos, "subscript on non-array")
+            end
+  in
+    trexp e
   end
+
+fun transProg ast = 
+    let
+        val _ = transExp(E.base_venv, E.base_tenv, ast)
+    in
+    ()
+    end
+
+
+end

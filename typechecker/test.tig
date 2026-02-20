@@ -1,6 +1,1 @@
-let
-  function foo():int = 1
-  function foo():int = 2
-in
-  foo()
-end
+"hello" + 3

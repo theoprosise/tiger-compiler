@@ -12,6 +12,7 @@ parse.sml
 tiger.lex
 tiger.grm
 prabsyn.sml
+translate.sml
 main.sml
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
