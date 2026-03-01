@@ -16,6 +16,7 @@ struct
   datatype enventry = VarEntry of {ty:ty}
                     | FunEntry of {formals: ty list, result: ty}
 
+  (* fill in the base_tenv and the base_venv *)
   val base_tenv = Symbol.empty
   val base_venv = Symbol.empty
 end
