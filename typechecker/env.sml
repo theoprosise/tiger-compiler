@@ -20,7 +20,13 @@ struct
   (* type environment *)
   (* the job of the tenv is to map the symbol int to the Ty.INT and string to Ty.STRING*)
   (* predifined types*)
-  val base_tenv = Symbol.empty 
+  val base_tenv =
+  let val map : (ty Symbol.table) = Symbol.empty 
+      val type_List = [(Symbol.symbol("int"),ty.INT),(Symbol.symbol("string"),ty.STRING)]
+      fun addToMap((sym,ty),currentMap) = Symbol.enter(currentMap,sym,ty)
+  in 
+    foldl addToMap map type_List
+  end
   (* value environment *)
   (* predifined functions aka contains the bindings of the predefined functions in the language these are defined bu the formals and the result of the FunEntry in our enventry datatype*)
   val base_venv =
