@@ -22,7 +22,7 @@ struct
   (* predifined types*)
   val base_tenv =
   let val map : (ty Symbol.table) = Symbol.empty 
-      val type_List = [(Symbol.symbol("int"),ty.INT),(Symbol.symbol("string"),ty.STRING)]
+      val type_List = [(Symbol.symbol("int"),Types.INT),(Symbol.symbol("string"),Types.STRING)]
       fun addToMap((sym,ty),currentMap) = Symbol.enter(currentMap,sym,ty)
   in 
     foldl addToMap map type_List
@@ -31,21 +31,21 @@ struct
   (* predifined functions aka contains the bindings of the predefined functions in the language these are defined bu the formals and the result of the FunEntry in our enventry datatype*)
   val base_venv =
   let val map : (enventry Symbol.table) = Symbol.empty
-    val predifiendFunList = [
-      (Symbol.symbol("print"),FunEntry{formals=[ty.STRING],results=ty.UNIT}),
-      (Symbol.symbol("flush"),FunEntry{formals=[],result=ty.UNIT}),
-      (Symbol.symbol("getchar"),FunEntry{formals=[],result=ty.STRING}),
-      (Symbol.symbol("ord"),FunEntry{formals=[ty.STRING],result=ty.INT}),
-      (Symbol.symbol("chr"),FunEntry{formals=[ty.INT], result=ty.STRING}),
-      (Symbol.symbol("size"),FunEntry{formals=[ty.STRING],result=ty.INT}),
-      (Symbol.symbol("substring"),FunEntry{formals=[ty.STRING,ty.INT,ty.INT], result=ty.STRING}),
-      (Symbol.symbol("concat"),FunEntry{formals=[ty.STRING,ty.STRING],result=ty.STRING}),
-      (Symbol.symbol("not"),FunEntry{formals=[ty.INT],result=ty.INT}),
-      (Symbol.symbol("exit"),FunEntry{formals=[ty.INT],result=ty.BOTTOM})
+    val predifinedFunList = [
+      (Symbol.symbol("print"),FunEntry{formals=[Types.STRING],result=Types.UNIT}),
+      (Symbol.symbol("flush"),FunEntry{formals=[],result=Types.UNIT}),
+      (Symbol.symbol("getchar"),FunEntry{formals=[],result=Types.STRING}),
+      (Symbol.symbol("ord"),FunEntry{formals=[Types.STRING],result=Types.INT}),
+      (Symbol.symbol("chr"),FunEntry{formals=[Types.INT], result=Types.STRING}),
+      (Symbol.symbol("size"),FunEntry{formals=[Types.STRING],result=Types.INT}),
+      (Symbol.symbol("substring"),FunEntry{formals=[Types.STRING,Types.INT,Types.INT], result=Types.STRING}),
+      (Symbol.symbol("concat"),FunEntry{formals=[Types.STRING,Types.STRING],result=Types.STRING}),
+      (Symbol.symbol("not"),FunEntry{formals=[Types.INT],result=Types.INT}),
+      (Symbol.symbol("exit"),FunEntry{formals=[Types.INT],result=Types.BOTTOM})
     ]
     fun addToMap((sym,ty),currentMap) = Symbol.enter(currentMap,sym,ty)
   in 
-  foldl addToMap map predifiedFunList
+  foldl addToMap map predifinedFunList
   end
 end
 
