@@ -33,6 +33,7 @@ struct
   let val map : (enventry Symbol.table) = Symbol.empty
     val predifinedFunList = [
       (Symbol.symbol("print"),FunEntry{formals=[Types.STRING],result=Types.UNIT}),
+      (Symbol.symbol("printi"),FunEntry{formals=[Types.INT],result=Types.UNIT}),
       (Symbol.symbol("flush"),FunEntry{formals=[],result=Types.UNIT}),
       (Symbol.symbol("getchar"),FunEntry{formals=[],result=Types.STRING}),
       (Symbol.symbol("ord"),FunEntry{formals=[Types.STRING],result=Types.INT}),
