@@ -116,9 +116,9 @@ fun transTy (tenv: tenv, t: A.ty) : TY.ty =
 fun transExp (venv, tenv, e) : expty =
   let
     (* breakOk tracks whether BreakExp is legal *)
-    fun trexp (venv: venv, tenv: tenv) (breakOk: bool) (e: A.exp) : expty =
+    fun trexp (venv: venv, tenv: tenv, breakOk: bool) (e: A.exp) : expty =
       case e of
-        A.VarExp v => trvar (venv, tenv) breakOk v
+       A.VarExp v => trvar (venv, tenv, breakOk) v
       | A.NilExp => {exp=(), ty=TY.NIL}
       | A.IntExp _ => {exp=(), ty=TY.INT}
       | A.StringExp _ => {exp=(), ty=TY.STRING}
@@ -126,7 +126,7 @@ fun transExp (venv, tenv, e) : expty =
       | A.CallExp {func, args, pos} =>
           let
             val (formals, result) = lookupFun (venv, func, pos)
-            val argTys = map (fn a => #ty (trexp (venv, tenv) breakOk a)) args
+            val argTys = map (fn a => #ty (trexp (venv, tenv, breakOk) a)) args
 
             fun checkArgs ([], []) = ()
               | checkArgs (f::fs, a::as') =
@@ -141,8 +141,8 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.OpExp {left, oper, right, pos} =>
           let
-            val tL = #ty (trexp (venv, tenv) breakOk left)
-            val tR = #ty (trexp (venv, tenv) breakOk right)
+            val tL = #ty (trexp (venv, tenv, breakOk) left)
+            val tR = #ty (trexp (venv, tenv, breakOk) right)
 
             fun bothInt () =
               (requireInt (tL, pos); requireInt (tR, pos); {exp=(), ty=TY.INT})
@@ -155,24 +155,43 @@ fun transExp (venv, tenv, e) : expty =
                | (_, TY.BOTTOM) => {exp=(), ty=TY.INT}
                | _ => (ErrorMsg.error pos "invalid comparison"; {exp=(), ty=TY.INT}))
 
-            fun eqNeq () =
-              (if assignable (tL, tR) andalso assignable (tR, tL)
-               then ()
-               else ErrorMsg.error pos "invalid equality comparison";
-               {exp=(), ty=TY.INT})
-          in
-            case oper of
-              A.PlusOp => bothInt ()
-            | A.MinusOp => bothInt ()
-            | A.TimesOp => bothInt ()
-            | A.DivideOp => bothInt ()
-            | A.LtOp => cmpIntOrString ()
-            | A.LeOp => cmpIntOrString ()
-            | A.GtOp => cmpIntOrString ()
-            | A.GeOp => cmpIntOrString ()
-            | A.EqOp => eqNeq ()
-            | A.NeqOp => eqNeq ()
-          end
+            fun eqOk (t1, t2) =
+        let
+          val a = actual_ty t1
+          val b = actual_ty t2
+        in
+          case (a,b) of
+            (TY.INT, TY.INT) => true
+          | (TY.STRING, TY.STRING) => true
+          | (TY.RECORD(_,u1), TY.RECORD(_,u2)) => u1 = u2
+          | (TY.ARRAY(_,u1), TY.ARRAY(_,u2)) => u1 = u2
+          | (TY.NIL, TY.NIL) => true
+          | (TY.NIL, TY.RECORD _) => true
+          | (TY.RECORD _, TY.NIL) => true
+          | (TY.BOTTOM, _) => true
+          | (_, TY.BOTTOM) => true
+          | _ => false
+        end
+
+      fun eqNeq () =
+        (if eqOk (tL, tR)
+         then ()
+         else ErrorMsg.error pos "invalid equality comparison";
+         {exp=(), ty=TY.INT})
+
+    in
+      case oper of
+        A.PlusOp => bothInt ()
+      | A.MinusOp => bothInt ()
+      | A.TimesOp => bothInt ()
+      | A.DivideOp => bothInt ()
+      | A.LtOp => cmpIntOrString ()
+      | A.LeOp => cmpIntOrString ()
+      | A.GtOp => cmpIntOrString ()
+      | A.GeOp => cmpIntOrString ()
+      | A.EqOp => eqNeq ()
+      | A.NeqOp => eqNeq ()
+    end
 
       | A.RecordExp {fields, typ, pos} =>
           let
@@ -189,7 +208,7 @@ fun transExp (venv, tenv, e) : expty =
                   fun checkOne (name, exp, fpos) =
                     let
                       val expected = findFieldTy name
-                      val actual = #ty (trexp (venv, tenv) breakOk exp)
+                      val actual = #ty (trexp (venv, tenv, breakOk) exp)
                       val _ =
                         if expected = TY.BOTTOM
                         then ErrorMsg.error fpos ("unknown field " ^ S.name name)
@@ -210,16 +229,16 @@ fun transExp (venv, tenv, e) : expty =
       | A.SeqExp exps =>
           let
             fun lastTy [] = TY.UNIT
-              | lastTy [(e,_)] = #ty (trexp (venv, tenv) breakOk e)
-              | lastTy ((e,_)::rest) = (ignore (trexp (venv, tenv) breakOk e); lastTy rest)
+              | lastTy [(e,_)] = #ty (trexp (venv, tenv, breakOk) e)
+              | lastTy ((e,_)::rest) = (ignore (trexp (venv, tenv, breakOk) e); lastTy rest)
           in
             {exp=(), ty=actual_ty (lastTy exps)}
           end
 
       | A.AssignExp {var, exp, pos} =>
           let
-            val tV = #ty (trvar (venv, tenv) breakOk var)
-            val tE = #ty (trexp (venv, tenv) breakOk exp)
+            val tV = #ty (trvar (venv, tenv, breakOk) var)
+            val tE = #ty (trexp (venv, tenv, breakOk) exp)
             val _ = requireAssignable (tV, tE, pos)
           in
             {exp=(), ty=TY.UNIT}
@@ -227,48 +246,49 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.IfExp {test, then', else', pos} =>
           let
-            val tTest = #ty (trexp (venv, tenv) breakOk test)
+            val tTest = #ty (trexp (venv, tenv, breakOk) test)
             val _ = requireInt (tTest, pos)
-            val tThen = #ty (trexp (venv, tenv) breakOk then')
+            val tThen = #ty (trexp (venv, tenv, breakOk) then')
           in
             case else' of
               NONE =>
                 (requireUnit (tThen, pos); {exp=(), ty=TY.UNIT})
             | SOME e2 =>
                 let
-                  val tElse = #ty (trexp (venv, tenv) breakOk e2)
-                  val _ =
-                    if assignable (tThen, tElse) andalso assignable (tElse, tThen)
-                    then ()
-                    else ErrorMsg.error pos "then/else type mismatch"
-                in
-                  {exp=(), ty=actual_ty tThen}
-                end
+                  val tElse = #ty (trexp (venv, tenv, breakOk) e2)
+                   in
+                      if assignable (tThen, tElse) then {exp=(), ty=actual_ty tElse}
+                      else if assignable (tElse, tThen) then {exp=(), ty=actual_ty tThen}
+                      else (ErrorMsg.error pos "then/else type mismatch"; {exp=(), ty=TY.BOTTOM})
+                    end
           end
 
       | A.WhileExp {test, body, pos} =>
           let
-            val tTest = #ty (trexp (venv, tenv) breakOk test)
+            val tTest = #ty (trexp (venv, tenv, breakOk) test)
             val _ = requireInt (tTest, pos)
-            val tBody = #ty (trexp (venv, tenv) true body)
+            val tBody = #ty (trexp (venv, tenv, true) body)
             val _ = requireUnit (tBody, pos)
           in
             {exp=(), ty=TY.UNIT}
           end
 
       | A.ForExp {var, lo, hi, body, pos, ...} =>
-        let
-        val tLo = #ty (trexp (venv, tenv) breakOk lo)
-        val tHi = #ty (trexp (venv, tenv) breakOk hi)
-        val _ = requireInt (tLo, pos)
-        val _ = requireInt (tHi, pos)
+          let
+            val tLo = #ty (trexp (venv, tenv, breakOk) lo)
+            val tHi = #ty (trexp (venv, tenv, breakOk) hi)
+            val _ = requireInt (tLo, pos)
+            val _ = requireInt (tHi, pos)
 
-        val venv' = S.enter (venv, var, E.VarEntry {ty = TY.INT})
-        val tBody = #ty (trexp (venv', tenv) true body)
-        val _ = requireUnit (tBody, pos)
-        in
-        {exp=(), ty=TY.UNIT}
-     end
+            val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT})
+
+            (* allow break in the body *)
+            val tBody = #ty (trexp (venv', tenv, true) body)
+
+            val _ = requireUnit (tBody, pos)
+          in
+            {exp=(), ty=TY.UNIT}
+          end
 
       | A.BreakExp pos =>
           if breakOk
@@ -278,22 +298,22 @@ fun transExp (venv, tenv, e) : expty =
     | A.LetExp {decs, body, pos} =>
         let
             val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, decs)
-            val tBody = #ty (trexp (venv', tenv') breakOk body)
-            in
-                {exp=(), ty=actual_ty tBody}
-        end
+            val tBody = #ty (trexp (venv', tenv', breakOk) body)
+          in
+            {exp=(), ty=actual_ty tBody}
+          end
 
 
       | A.ArrayExp {typ, size, init, pos} =>
           let
             val tArr = actual_ty (lookupTy (tenv, typ, pos))
-            val tSize = #ty (trexp (venv, tenv) breakOk size)
+            val tSize = #ty (trexp (venv, tenv, breakOk) size)
             val _ = requireInt (tSize, pos)
           in
             case tArr of
               TY.ARRAY (elemTy, _) =>
                 let
-                  val tInit = #ty (trexp (venv, tenv) breakOk init)
+                  val tInit = #ty (trexp (venv, tenv, breakOk) init)
                   val _ = requireAssignable (elemTy, tInit, pos)
                 in
                   {exp=(), ty=tArr}
@@ -303,14 +323,14 @@ fun transExp (venv, tenv, e) : expty =
                     {exp=(), ty=TY.BOTTOM})
           end
 
-    and trvar (venv: venv, tenv: tenv) (breakOk: bool) (v: A.var) : expty =
+    and trvar (venv: venv, tenv: tenv, breakOk: bool) (v: A.var) : expty =
       case v of
         A.SimpleVar (id, pos) =>
           {exp=(), ty=actual_ty (lookupVarTy (venv, id, pos))}
 
       | A.FieldVar (base, field, pos) =>
           let
-            val tBase = #ty (trvar (venv, tenv) breakOk base)
+            val tBase = #ty (trvar (venv, tenv, breakOk) base)
           in
             case actual_ty tBase of
               TY.RECORD (fields, _) =>
@@ -323,8 +343,8 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.SubscriptVar (base, idx, pos) =>
           let
-            val tBase = #ty (trvar (venv, tenv) breakOk base)
-            val tIdx  = #ty (trexp (venv, tenv) breakOk idx)
+            val tBase = #ty (trvar (venv, tenv, breakOk) base)
+            val tIdx  = #ty (trexp (venv, tenv, breakOk) idx)
             val _ = requireInt (tIdx, pos)
           in
             case actual_ty tBase of
@@ -442,7 +462,7 @@ fun transExp (venv, tenv, e) : expty =
       end
 
   in
-    trexp (venv, tenv) false e
+    trexp (venv, tenv, false) e
   end
 
 fun transProg ast =
