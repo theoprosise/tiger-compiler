@@ -207,38 +207,56 @@ fun transExp (venv, tenv, e) : expty =
       | A.NeqOp => eqNeq ()
     end
 
-      | A.RecordExp {fields, typ, pos} =>
+     | A.RecordExp {fields, typ, pos} =>
+    let
+      val t = actual_ty (lookupTy (tenv, typ, pos))
+    in
+      case t of
+        TY.RECORD (fieldTys, _) =>
           let
-            val t = actual_ty (lookupTy (tenv, typ, pos))
+            fun findFieldTy s =
+              case List.find (fn (n, _) => n = s) fieldTys of
+                SOME (_, ty) => ty
+              | NONE => TY.BOTTOM
+
+            val provided = map (fn (name, _, _) => name) fields
+
+            fun occurs (x, xs) = List.exists (fn y => y = x) xs
+
+            fun checkDups [] = ()
+              | checkDups (x::xs) =
+                  (if occurs (x, xs)
+                   then ErrorMsg.error pos ("duplicate field " ^ S.name x)
+                   else ();
+                   checkDups xs)
+                   
+            fun checkMissing [] = ()
+              | checkMissing ((n, _)::rest) =
+                  (if occurs (n, provided)
+                   then ()
+                   else ErrorMsg.error pos ("missing field " ^ S.name n);
+                   checkMissing rest)
+
+            fun checkOne (name, exp, fpos) =
+              let
+                val expected = findFieldTy name
+                val actual = #ty (trexp (venv, tenv, breakOk) exp)
+              in
+                if expected = TY.BOTTOM
+                then ErrorMsg.error fpos ("unknown field " ^ S.name name)
+                else requireAssignable (expected, actual, fpos)
+              end
+
+            val _ = checkDups provided
+            val _ = checkMissing fieldTys
+            val _ = app checkOne fields
           in
-            case t of
-              TY.RECORD (fieldTys, _) =>
-                let
-                  fun findFieldTy s =
-                    case List.find (fn (n, _) => n = s) fieldTys of
-                      SOME (_, ty) => ty
-                    | NONE => TY.BOTTOM
-
-                  fun checkOne (name, exp, fpos) =
-                    let
-                      val expected = findFieldTy name
-                      val actual = #ty (trexp (venv, tenv, breakOk) exp)
-                      val _ =
-                        if expected = TY.BOTTOM
-                        then ErrorMsg.error fpos ("unknown field " ^ S.name name)
-                        else requireAssignable (expected, actual, fpos)
-                    in
-                      ()
-                    end
-
-                  val _ = app checkOne fields
-                in
-                  {exp=(), ty=t}
-                end
-            | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
-            | _ => (ErrorMsg.error pos "record expression of non-record type";
-                    {exp=(), ty=TY.BOTTOM})
+            {exp=(), ty=t}
           end
+      | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+            | _ => (ErrorMsg.error pos "record expression of non-record type";
+           {exp=(), ty=TY.BOTTOM})
+    end
 
       | A.SeqExp exps =>
           let
