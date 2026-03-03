@@ -1,4 +1,4 @@
-/* error : procedure returns value  and procedure is used in arexpr */
+/* error : procedure returns value and procedure is used in arexpr */
 let
 
 /* calculate n! */

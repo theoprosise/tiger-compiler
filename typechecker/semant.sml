@@ -89,15 +89,25 @@ fun lookupTy (tenv, sym, pos) =
 
 fun lookupVarTy (venv, sym, pos) =
   case S.look (venv, sym) of
-    SOME (E.VarEntry {ty}) => ty
+    SOME (E.VarEntry {ty, ...}) => ty
   | SOME _ => (ErrorMsg.error pos ("not a variable: " ^ S.name sym); TY.BOTTOM)
   | NONE => (ErrorMsg.error pos ("undefined variable " ^ S.name sym); TY.BOTTOM)
 
 fun lookupFun (venv, sym, pos) =
   case S.look (venv, sym) of
-    SOME (E.FunEntry {formals, result}) => (formals, result)
-  | SOME _ => (ErrorMsg.error pos ("not a function: " ^ S.name sym); ([], TY.BOTTOM))
-  | NONE => (ErrorMsg.error pos ("undefined function " ^ S.name sym); ([], TY.BOTTOM))
+    SOME (E.FunEntry {formals, result}) => SOME (formals, result)
+  | SOME _ => (ErrorMsg.error pos ("not a function: " ^ S.name sym); NONE)
+  | NONE => (ErrorMsg.error pos ("undefined function " ^ S.name sym); NONE)
+
+(* Check for var being used *)
+fun checkAssignableLHS (venv, v) =
+  case v of
+    A.SimpleVar (id, pos) =>
+      (case S.look (venv, id) of
+         SOME (E.VarEntry {readonly=true, ...}) =>
+           ErrorMsg.error pos "loop variable can't be assigned"
+       | _ => ())
+  | _ => ()
 
 (* Translate Absyn.ty to Types.ty (used by TypeDec pass2) *)
 fun transTy (tenv: tenv, t: A.ty) : TY.ty =
@@ -124,20 +134,24 @@ fun transExp (venv, tenv, e) : expty =
       | A.StringExp _ => {exp=(), ty=TY.STRING}
 
       | A.CallExp {func, args, pos} =>
-          let
-            val (formals, result) = lookupFun (venv, func, pos)
-            val argTys = map (fn a => #ty (trexp (venv, tenv, breakOk) a)) args
+    (case lookupFun (venv, func, pos) of
+       NONE =>
+         (*  we already emitted an error *)
+         {exp=(), ty=TY.BOTTOM}
+     | SOME (formals, result) =>
+         let
+           val argTys = map (fn a => #ty (trexp (venv, tenv, breakOk) a)) args
 
-            fun checkArgs ([], []) = ()
-              | checkArgs (f::fs, a::as') =
-                  (requireAssignable (f, a, pos); checkArgs (fs, as'))
-              | checkArgs _ =
-                  ErrorMsg.error pos "wrong number of arguments"
+           fun checkArgs ([], []) = ()
+             | checkArgs (f::fs, a::as') =
+                 (requireAssignable (f, a, pos); checkArgs (fs, as'))
+             | checkArgs _ =
+                 ErrorMsg.error pos "wrong number of arguments"
 
-            val _ = checkArgs (formals, argTys)
-          in
-            {exp=(), ty=actual_ty result}
-          end
+           val _ = checkArgs (formals, argTys)
+         in
+           {exp=(), ty=actual_ty result}
+         end)
 
       | A.OpExp {left, oper, right, pos} =>
           let
@@ -237,6 +251,7 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.AssignExp {var, exp, pos} =>
           let
+            val _  = checkAssignableLHS (venv, var)
             val tV = #ty (trvar (venv, tenv, breakOk) var)
             val tE = #ty (trexp (venv, tenv, breakOk) exp)
             val _ = requireAssignable (tV, tE, pos)
@@ -280,7 +295,7 @@ fun transExp (venv, tenv, e) : expty =
             val _ = requireInt (tLo, pos)
             val _ = requireInt (tHi, pos)
 
-            val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT})
+            val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT, readonly=true})
 
             (* allow break in the body *)
             val tBody = #ty (trexp (venv', tenv, true) body)
@@ -378,7 +393,7 @@ fun transExp (venv, tenv, e) : expty =
                in
                  actual_ty tDecl
                end)
-        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy})
+        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy, readonly = false})
       in
         {venv = venv', tenv = tenv}
       end
@@ -431,30 +446,31 @@ fun transExp (venv, tenv, e) : expty =
 
         (* pass 2: check bodies *)
         fun bindParam (p: A.field, pty, v) =
-          S.enter (v, #name p, E.VarEntry {ty = pty})
+          S.enter (v, #name p, E.VarEntry {ty = pty, readonly = false})
 
         fun checkOne ({name, params, result, body, pos}: A.fundec) =
-          let
-            val (formals, res) = lookupFun (venv1, name, pos)
+            (case lookupFun (venv1, name, pos) of
+              NONE => ()
+            | SOME (formals, res) =>
+                let
+                  val _ =
+                    if length params = length formals then ()
+                    else ErrorMsg.error pos "wrong number of parameters"
 
-            val _ =
-              if length params = length formals then ()
-              else ErrorMsg.error pos "wrong number of parameters"
+                  val venvBody =
+                    if length params = length formals then
+                      ListPair.foldlEq bindParam venv1 (params, formals)
+                    else
+                      venv1
 
-            val venvBody =
-              if length params = length formals then
-                ListPair.foldlEq bindParam venv1 (params, formals)
-              else
-                venv1
-
-            val tBody = #ty (transExp (venvBody, tenv, body))
-            val _ =
-              case result of
-                NONE => requireUnit (tBody, pos)
-              | SOME _ => requireAssignable (res, tBody, pos)
-          in
-            ()
-          end
+                  val tBody = #ty (transExp (venvBody, tenv, body))
+                  val _ =
+                    case result of
+                      NONE => requireUnit (tBody, pos)
+                    | SOME _ => requireAssignable (res, tBody, pos)
+                in
+                  ()
+                end)
 
         val _ = app checkOne funs
       in

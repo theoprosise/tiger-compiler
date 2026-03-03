@@ -2,7 +2,7 @@ signature ENV =
 sig
     type access
     type ty
-    datatype enventry = VarEntry of {ty:ty}
+    datatype enventry = VarEntry of {ty:ty, readonly: bool}
                     | FunEntry of {formals: ty list, result: ty}
     val base_tenv : ty Symbol.table
     val base_venv : enventry Symbol.table
@@ -13,7 +13,7 @@ struct
   type access = unit
   type ty = Types.ty
 
-  datatype enventry = VarEntry of {ty:ty}
+  datatype enventry = VarEntry of {ty:ty, readonly:bool}
                     | FunEntry of {formals: ty list, result: ty}
 
   (* fill in the base_tenv and the base_venv *)
