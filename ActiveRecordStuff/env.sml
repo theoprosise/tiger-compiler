@@ -1,9 +1,10 @@
 signature ENV = 
 sig
     type access
+    type level
     type ty
-    datatype enventry = VarEntry of {ty:ty, readonly: bool}
-                    | FunEntry of {formals: ty list, result: ty}
+    datatype enventry = VarEntry of {ty:ty, access: access readonly: bool}
+                    | FunEntry of {level: level, label: Temp.label, formals: ty list, result: ty}
     val base_tenv : ty Symbol.table
     val base_venv : enventry Symbol.table
 end
@@ -11,10 +12,11 @@ end
 structure Env : ENV =
 struct
   type access = unit
+  type level = Translate.level
   type ty = Types.ty
 
-  datatype enventry = VarEntry of {ty:ty, readonly:bool}
-                    | FunEntry of {formals: ty list, result: ty}
+  datatype enventry = VarEntry of {ty:ty, access: access, readonly:bool}
+                    | FunEntry of {level: level, label: Temp.label, formals: ty list, result: ty}
 
   (* fill in the base_tenv and the base_venv *)
   (* type environment *)

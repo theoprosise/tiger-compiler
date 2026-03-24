@@ -7,6 +7,10 @@ table.sml
 symbol.sml
 types.sml
 env.sml
+temp.sig
+temp.sml
+printtree.sml
+mipsframe.sml
 semant.sml
 parse.sml
 tiger.lex
