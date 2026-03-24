@@ -6,7 +6,7 @@ struct
   datatype exp =
       Ex of T.exp
     | Nx of T.stm
-    | Cx of (Temp.label * Temp.label -> T.stm)
+    | Cx of Temp.label * Temp.label -> T.stm
 
   datatype level =
       OUTERMOST

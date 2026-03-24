@@ -95,7 +95,8 @@ fun lookupVarTy (venv, sym, pos) =
 
 fun lookupFun (venv, sym, pos) =
   case S.look (venv, sym) of
-    SOME (E.FunEntry {formals, result}) => SOME (formals, result)
+    SOME (E.FunEntry {level, label, formals, result}) =>
+      SOME {level=level, label=label, formals=formals, result=result}
   | SOME _ => (ErrorMsg.error pos ("not a function: " ^ S.name sym); NONE)
   | NONE => (ErrorMsg.error pos ("undefined function " ^ S.name sym); NONE)
 
@@ -123,15 +124,14 @@ fun transTy (tenv: tenv, t: A.ty) : TY.ty =
   | A.ArrayTy (sym, pos) =>
       TY.ARRAY (lookupTy (tenv, sym, pos), ref ())
 
-fun transExp (venv, tenv, e) : expty =
+fun transExp (venv, tenv, level, e) : expty =
   let
-    (* breakOk tracks whether BreakExp is legal *)
-    fun trexp (venv: venv, tenv: tenv, breakOk: bool) (e: A.exp) : expty =
+    fun trexp (venv: venv, tenv: tenv, level: TR.level, breakLabel: Temp.label option) (e: A.exp) : expty =
       case e of
-       A.VarExp v => trvar (venv, tenv, breakOk) v
-      | A.NilExp => {exp=(), ty=TY.NIL}
-      | A.IntExp _ => {exp=(), ty=TY.INT}
-      | A.StringExp _ => {exp=(), ty=TY.STRING}
+       A.VarExp v => trvar (venv, tenv, level, breakLabel)  v
+      | A.NilExp => {exp = TR.nilExp (), ty = TY.NIL}
+      | A.IntExp _ => {exp = TR.intExp i, ty = TY.INT}
+      | A.StringExp _ => {exp = TR.stringExp s, ty = TY.STRING}
 
       | A.CallExp {func, args, pos} =>
     (case lookupFun (venv, func, pos) of
@@ -140,7 +140,7 @@ fun transExp (venv, tenv, e) : expty =
          {exp=(), ty=TY.BOTTOM}
      | SOME (formals, result) =>
          let
-           val argTys = map (fn a => #ty (trexp (venv, tenv, breakOk) a)) args
+           val argTys = map (fn a => #ty (trexp (venv, tenv, level, breakLabel)  a)) args
 
            fun checkArgs ([], []) = ()
              | checkArgs (f::fs, a::as') =
@@ -150,13 +150,25 @@ fun transExp (venv, tenv, e) : expty =
 
            val _ = checkArgs (formals, argTys)
          in
-           {exp=(), ty=actual_ty result}
+          case lookupFun (...) of
+            SOME {level=funLevel, label, formals, result} =>
+              let
+                val argsE = map (fn a => trexp (venv, tenv, level, breakLabel) a) args
+              in
+                {exp = TR.callExp{
+                        label = label,
+                        args = map #exp argsE,
+                        funLevel = funLevel,
+                        curLevel = level
+                      },
+                ty = actual_ty result}
+              end
          end)
 
       | A.OpExp {left, oper, right, pos} =>
           let
-            val tL = #ty (trexp (venv, tenv, breakOk) left)
-            val tR = #ty (trexp (venv, tenv, breakOk) right)
+            val tL = #ty (trexp (venv, tenv, level, breakLabel)  left)
+            val tR = #ty (trexp (venv, tenv, level, breakLabel)  right)
 
             fun bothInt () =
               (requireInt (tL, pos); requireInt (tR, pos); {exp=(), ty=TY.INT})
@@ -240,7 +252,7 @@ fun transExp (venv, tenv, e) : expty =
             fun checkOne (name, exp, fpos) =
               let
                 val expected = findFieldTy name
-                val actual = #ty (trexp (venv, tenv, breakOk) exp)
+                val actual = #ty (trexp (venv, tenv, level, breakLabel)  exp)
               in
                 if expected = TY.BOTTOM
                 then ErrorMsg.error fpos ("unknown field " ^ S.name name)
@@ -261,8 +273,8 @@ fun transExp (venv, tenv, e) : expty =
       | A.SeqExp exps =>
           let
             fun lastTy [] = TY.UNIT
-              | lastTy [(e,_)] = #ty (trexp (venv, tenv, breakOk) e)
-              | lastTy ((e,_)::rest) = (ignore (trexp (venv, tenv, breakOk) e); lastTy rest)
+              | lastTy [(e,_)] = #ty (trexp (venv, tenv, level, breakLabel)  e)
+              | lastTy ((e,_)::rest) = (ignore (trexp (venv, tenv, level, breakLabel)  e); lastTy rest)
           in
             {exp=(), ty=actual_ty (lastTy exps)}
           end
@@ -270,8 +282,8 @@ fun transExp (venv, tenv, e) : expty =
       | A.AssignExp {var, exp, pos} =>
           let
             val _  = checkAssignableLHS (venv, var)
-            val tV = #ty (trvar (venv, tenv, breakOk) var)
-            val tE = #ty (trexp (venv, tenv, breakOk) exp)
+            val tV = #ty (trvar (venv, tenv, level, breakLabel) var)
+            val tE = #ty (trexp (venv, tenv, level, breakLabel)  exp)
             val _ = requireAssignable (tV, tE, pos)
           in
             {exp=(), ty=TY.UNIT}
@@ -279,16 +291,16 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.IfExp {test, then', else', pos} =>
           let
-            val tTest = #ty (trexp (venv, tenv, breakOk) test)
+            val tTest = #ty (trexp (venv, tenv, level, breakLabel)  test)
             val _ = requireInt (tTest, pos)
-            val tThen = #ty (trexp (venv, tenv, breakOk) then')
+            val tThen = #ty (trexp (venv, tenv, level, breakLabel)  then')
           in
             case else' of
               NONE =>
                 (requireUnit (tThen, pos); {exp=(), ty=TY.UNIT})
             | SOME e2 =>
                 let
-                  val tElse = #ty (trexp (venv, tenv, breakOk) e2)
+                  val tElse = #ty (trexp (venv, tenv, level, breakLabel)  e2)
                    in
                       if assignable (tThen, tElse) then {exp=(), ty=actual_ty tElse}
                       else if assignable (tElse, tThen) then {exp=(), ty=actual_ty tThen}
@@ -298,25 +310,34 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.WhileExp {test, body, pos} =>
           let
-            val tTest = #ty (trexp (venv, tenv, breakOk) test)
+            val done = Temp.newlabel()
+            val tTest = #ty (trexp (venv, tenv, level, breakLabel)  test)
             val _ = requireInt (tTest, pos)
-            val tBody = #ty (trexp (venv, tenv, true) body)
+            val tBody = #ty (trexp (venv', tenv', level, breakLabel) body)
             val _ = requireUnit (tBody, pos)
           in
-            {exp=(), ty=TY.UNIT}
+            let
+              val done = Temp.newlabel()
+              val testE = trexp (venv, tenv, level, breakLabel) test
+              val bodyE = trexp (venv, tenv, level, SOME done) body
+            in
+              {exp = TR.whileExp(#exp testE, #exp bodyE, done),
+              ty = TY.UNIT}
+            end
           end
 
       | A.ForExp {var, lo, hi, body, pos, ...} =>
           let
-            val tLo = #ty (trexp (venv, tenv, breakOk) lo)
-            val tHi = #ty (trexp (venv, tenv, breakOk) hi)
+            val done = Temp.newlabel()
+            val tLo = #ty (trexp (venv, tenv, level, breakLabel)  lo)
+            val tHi = #ty (trexp (venv, tenv, level, breakLabel)  hi)
             val _ = requireInt (tLo, pos)
             val _ = requireInt (tHi, pos)
 
             val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT, readonly=true})
 
             (* allow break in the body *)
-            val tBody = #ty (trexp (venv', tenv, true) body)
+            val tBody = #ty (trexp (venv', tenv, level, SOME done) body)
 
             val _ = requireUnit (tBody, pos)
           in
@@ -324,29 +345,31 @@ fun transExp (venv, tenv, e) : expty =
           end
 
       | A.BreakExp pos =>
-          if breakOk
-          then {exp=(), ty=TY.UNIT}
-          else (ErrorMsg.error pos "break not inside loop"; {exp=(), ty=TY.UNIT})
+            (case breakLabel of
+                SOME done =>
+                  {exp = TR.breakExp done, ty = TY.UNIT}
+              | NONE =>
+                  (ErrorMsg.error pos "break not inside loop";
+                    {exp = TR.nilExp (), ty = TY.UNIT}))
 
     | A.LetExp {decs, body, pos} =>
         let
-            val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, decs)
-            val tBody = #ty (trexp (venv', tenv', breakOk) body)
+            val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, level, decs)
+            val tBody = #ty (trexp (venv', tenv', label, breakLabel) body)
           in
             {exp=(), ty=actual_ty tBody}
           end
 
-
       | A.ArrayExp {typ, size, init, pos} =>
           let
             val tArr = actual_ty (lookupTy (tenv, typ, pos))
-            val tSize = #ty (trexp (venv, tenv, breakOk) size)
+            val tSize = #ty (trexp (venv, tenv, level, breakLabel)  size)
             val _ = requireInt (tSize, pos)
           in
             case tArr of
               TY.ARRAY (elemTy, _) =>
                 let
-                  val tInit = #ty (trexp (venv, tenv, breakOk) init)
+                  val tInit = #ty (transExp (venv, tenv, level, init))
                   val _ = requireAssignable (elemTy, tInit, pos)
                 in
                   {exp=(), ty=tArr}
@@ -356,14 +379,17 @@ fun transExp (venv, tenv, e) : expty =
                     {exp=(), ty=TY.BOTTOM})
           end
 
-    and trvar (venv: venv, tenv: tenv, breakOk: bool) (v: A.var) : expty =
+    and trvar (venv: venv, tenv: tenv, level: TR.level, breakLabel: Temp.label option) (v: A.var) : expty =
       case v of
         A.SimpleVar (id, pos) =>
-          {exp=(), ty=actual_ty (lookupVarTy (venv, id, pos))}
+          (case S.look (venv, id) of
+            SOME (E.VarEntry {ty, access, ...}) =>
+              {exp = TR.simpleVar(access, level), ty = actual_ty ty}
+              | _ => typeError (pos, "undefined variable"))
 
       | A.FieldVar (base, field, pos) =>
           let
-            val tBase = #ty (trvar (venv, tenv, breakOk) base)
+            val tBase = #ty (trvar (venv, tenv, level, breakLabel) base)
           in
             case actual_ty tBase of
               TY.RECORD (fields, _) =>
@@ -376,8 +402,8 @@ fun transExp (venv, tenv, e) : expty =
 
       | A.SubscriptVar (base, idx, pos) =>
           let
-            val tBase = #ty (trvar (venv, tenv, breakOk) base)
-            val tIdx  = #ty (trexp (venv, tenv, breakOk) idx)
+            val tBase = #ty (trvar (venv, tenv, level, breakLabel)  base)
+            val tIdx  = #ty (trexp (venv, tenv, level, breakLabel)  idx)
             val _ = requireInt (tIdx, pos)
           in
             case actual_ty tBase of
@@ -386,18 +412,18 @@ fun transExp (venv, tenv, e) : expty =
             | _ => typeError (pos, "subscript on non-array")
           end
 
-    and transDecs (venv: venv, tenv: tenv, decs: A.dec list)
+    and transDecs (venv: venv, tenv: tenv, level: TR.level, decs: A.dec list)
         : {venv: venv, tenv: tenv} =
-      foldl (fn (d, {venv, tenv}) => transDec (venv, tenv, d))
+      foldl (fn (d, {venv, tenv}) => transDec (venv, tenv, level, d))
             {venv=venv, tenv=tenv}
             decs
 
-   and transDec (venv: venv, tenv: tenv, d: A.dec)
+   and transDec (venv: venv, tenv: tenv, level: TR.level, d: A.dec)
     : {venv: venv, tenv: tenv} =
   case d of
     A.VarDec {name, typ, init, pos, ...} =>
       let
-        val tInit = #ty (transExp (venv, tenv, init))
+        val tInit = #ty (transExp (venv, tenv, level, init))
         val varTy =
           (case typ of
              NONE =>
@@ -411,7 +437,8 @@ fun transExp (venv, tenv, e) : expty =
                in
                  actual_ty tDecl
                end)
-        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy, readonly = false})
+        val access = TR.allocLocal level true
+        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy, access = access readonly = false})
       in
         {venv = venv', tenv = tenv}
       end
@@ -480,8 +507,12 @@ fun transExp (venv, tenv, e) : expty =
                       ListPair.foldlEq bindParam venv1 (params, formals)
                     else
                       venv1
-
-                  val tBody = #ty (transExp (venvBody, tenv, body))
+                 
+                 val label = Temp.newlabel()
+                  val funLevel =
+                    TR.newLevel {parent = level, name = label, formals = map (fn _ => true) params}
+                  
+                  val tBody = #ty (transExp (venvBody, tenv, funLevel, body))
                   val _ =
                     case result of
                       NONE => requireUnit (tBody, pos)
@@ -496,12 +527,12 @@ fun transExp (venv, tenv, e) : expty =
       end
 
   in
-    trexp (venv, tenv, false) e
+    trexp (venv, tenv, level, NONE) e
   end
 
 fun transProg ast =
   let
-    val _ = transExp (E.base_venv, E.base_tenv, ast)
+    val _ = transExp (E.base_venv, E.base_tenv, TR.outermost, ast)
   in
     ()
   end
