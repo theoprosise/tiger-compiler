@@ -65,7 +65,7 @@ fun assignable (dst, src) =
   end
 
 fun typeError (pos, msg) =
-  (ErrorMsg.error pos msg; {exp = (), ty = TY.BOTTOM})
+    (ErrorMsg.error pos msg; {exp = TR.nilExp (), ty = TY.BOTTOM})
 
 fun requireInt (t, pos) =
   case actual_ty t of
@@ -130,94 +130,88 @@ fun transExp (venv, tenv, level, e) : expty =
       case e of
        A.VarExp v => trvar (venv, tenv, level, breakLabel)  v
       | A.NilExp => {exp = TR.nilExp (), ty = TY.NIL}
-      | A.IntExp _ => {exp = TR.intExp i, ty = TY.INT}
-      | A.StringExp _ => {exp = TR.stringExp s, ty = TY.STRING}
+      | A.IntExp i => {exp = TR.intExp i, ty = TY.INT}
+      | A.StringExp (s,_) => {exp = TR.stringExp s, ty = TY.STRING}
 
       | A.CallExp {func, args, pos} =>
-    (case lookupFun (venv, func, pos) of
-       NONE =>
-         (*  we already emitted an error *)
-         {exp=(), ty=TY.BOTTOM}
-     | SOME (formals, result) =>
-         let
-           val argTys = map (fn a => #ty (trexp (venv, tenv, level, breakLabel)  a)) args
+        (case lookupFun (venv, func, pos) of
+          NONE => {exp=TR.nilExp(), ty=TY.BOTTOM}
+        | SOME {level=funLevel, label, formals, result} =>
+            let
+              val argsE = map (fn a => trexp (venv, tenv, level, breakLabel) a) args
 
-           fun checkArgs ([], []) = ()
-             | checkArgs (f::fs, a::as') =
-                 (requireAssignable (f, a, pos); checkArgs (fs, as'))
-             | checkArgs _ =
-                 ErrorMsg.error pos "wrong number of arguments"
+              fun checkArgs ([], []) = ()
+                | checkArgs (f::fs, a::as') =
+                    (requireAssignable (f, a, pos); checkArgs (fs, as'))
+                | checkArgs _ =
+                    ErrorMsg.error pos "wrong number of arguments"
 
-           val _ = checkArgs (formals, argTys)
-         in
-          case lookupFun (...) of
-            SOME {level=funLevel, label, formals, result} =>
-              let
-                val argsE = map (fn a => trexp (venv, tenv, level, breakLabel) a) args
-              in
-                {exp = TR.callExp{
-                        label = label,
-                        args = map #exp argsE,
-                        funLevel = funLevel,
-                        curLevel = level
-                      },
+              val _ = checkArgs (formals, map #ty argsE)
+            in
+              {exp = TR.callExp{
+                      label = label,
+                      args = map #exp argsE,
+                      funLevel = funLevel,
+                      curLevel = level
+                    },
                 ty = actual_ty result}
-              end
-         end)
+            end)
 
       | A.OpExp {left, oper, right, pos} =>
           let
-            val tL = #ty (trexp (venv, tenv, level, breakLabel)  left)
-            val tR = #ty (trexp (venv, tenv, level, breakLabel)  right)
+            val eL = trexp (venv, tenv, level, breakLabel) left
+            val eR = trexp (venv, tenv, level, breakLabel) right
+            val tL = #ty eL
+            val tR = #ty eR
 
-            fun bothInt () =
-              (requireInt (tL, pos); requireInt (tR, pos); {exp=(), ty=TY.INT})
+            fun bothInt bop =
+              (requireInt (tL, pos);
+              requireInt (tR, pos);
+              {exp = TR.arithExp (bop, #exp eL, #exp eR), ty = TY.INT})
 
-            fun cmpIntOrString () =
+            fun cmpIntOrString rop =
               (case (actual_ty tL, actual_ty tR) of
-                 (TY.INT, TY.INT) => {exp=(), ty=TY.INT}
-               | (TY.STRING, TY.STRING) => {exp=(), ty=TY.INT}
-               | (TY.BOTTOM, _) => {exp=(), ty=TY.INT}
-               | (_, TY.BOTTOM) => {exp=(), ty=TY.INT}
-               | _ => (ErrorMsg.error pos "invalid comparison"; {exp=(), ty=TY.INT}))
+                (TY.INT, TY.INT) => {exp = TR.relExp (rop, #exp eL, #exp eR), ty = TY.INT}
+              | (TY.STRING, TY.STRING) => {exp = TR.relExp (rop, #exp eL, #exp eR), ty = TY.INT}
+              | (TY.BOTTOM, _) => {exp = TR.nilExp (), ty = TY.INT}
+              | (_, TY.BOTTOM) => {exp = TR.nilExp (), ty = TY.INT}
+              | _ => (ErrorMsg.error pos "invalid comparison"; {exp = TR.nilExp (), ty = TY.INT}))
 
             fun eqOk (t1, t2) =
-        let
-          val a = actual_ty t1
-          val b = actual_ty t2
-        in
-          case (a,b) of
-            (TY.INT, TY.INT) => true
-          | (TY.STRING, TY.STRING) => true
-          | (TY.RECORD(_,u1), TY.RECORD(_,u2)) => u1 = u2
-          | (TY.ARRAY(_,u1), TY.ARRAY(_,u2)) => u1 = u2
-          | (TY.NIL, TY.NIL) => true
-          | (TY.NIL, TY.RECORD _) => true
-          | (TY.RECORD _, TY.NIL) => true
-          | (TY.BOTTOM, _) => true
-          | (_, TY.BOTTOM) => true
-          | _ => false
-        end
+              let
+                val a = actual_ty t1
+                val b = actual_ty t2
+              in
+                case (a, b) of
+                  (TY.INT, TY.INT) => true
+                | (TY.STRING, TY.STRING) => true
+                | (TY.RECORD(_,u1), TY.RECORD(_,u2)) => u1 = u2
+                | (TY.ARRAY(_,u1), TY.ARRAY(_,u2)) => u1 = u2
+                | (TY.NIL, TY.NIL) => true
+                | (TY.NIL, TY.RECORD _) => true
+                | (TY.RECORD _, TY.NIL) => true
+                | (TY.BOTTOM, _) => true
+                | (_, TY.BOTTOM) => true
+                | _ => false
+              end
 
-      fun eqNeq () =
-        (if eqOk (tL, tR)
-         then ()
-         else ErrorMsg.error pos "invalid equality comparison";
-         {exp=(), ty=TY.INT})
-
-    in
-      case oper of
-        A.PlusOp => bothInt ()
-      | A.MinusOp => bothInt ()
-      | A.TimesOp => bothInt ()
-      | A.DivideOp => bothInt ()
-      | A.LtOp => cmpIntOrString ()
-      | A.LeOp => cmpIntOrString ()
-      | A.GtOp => cmpIntOrString ()
-      | A.GeOp => cmpIntOrString ()
-      | A.EqOp => eqNeq ()
-      | A.NeqOp => eqNeq ()
-    end
+            fun eqNeq rop =
+              (if eqOk (tL, tR) then ()
+              else ErrorMsg.error pos "invalid equality comparison";
+              {exp = TR.relExp (rop, #exp eL, #exp eR), ty = TY.INT})
+          in
+            case oper of
+              A.PlusOp   => bothInt TR.PlusOp
+            | A.MinusOp  => bothInt TR.MinusOp
+            | A.TimesOp  => bothInt TR.TimesOp
+            | A.DivideOp => bothInt TR.DivideOp
+            | A.LtOp     => cmpIntOrString TR.LtOp
+            | A.LeOp     => cmpIntOrString TR.LeOp
+            | A.GtOp     => cmpIntOrString TR.GtOp
+            | A.GeOp     => cmpIntOrString TR.GeOp
+            | A.EqOp     => eqNeq TR.EqOp
+            | A.NeqOp    => eqNeq TR.NeqOp
+          end
 
      | A.RecordExp {fields, typ, pos} =>
     let
@@ -263,11 +257,11 @@ fun transExp (venv, tenv, level, e) : expty =
             val _ = checkMissing fieldTys
             val _ = app checkOne fields
           in
-            {exp=(), ty=t}
+            {exp = TR.nilExp (), ty = t}
           end
-      | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+      | TY.BOTTOM => {exp= TR.nilExp (), ty=TY.BOTTOM}
             | _ => (ErrorMsg.error pos "record expression of non-record type";
-           {exp=(), ty=TY.BOTTOM})
+           {exp = TR.nilExp (), ty=TY.BOTTOM})
     end
 
       | A.SeqExp exps =>
@@ -275,8 +269,10 @@ fun transExp (venv, tenv, level, e) : expty =
             fun lastTy [] = TY.UNIT
               | lastTy [(e,_)] = #ty (trexp (venv, tenv, level, breakLabel)  e)
               | lastTy ((e,_)::rest) = (ignore (trexp (venv, tenv, level, breakLabel)  e); lastTy rest)
+            val exps = map (fn (e,_) => trexp (venv, tenv, level, breakLabel) e) exps
+
           in
-            {exp=(), ty=actual_ty (lastTy exps)}
+            {exp = TR.seqExp (map #exp exps), ty = actual_ty (case rev exps of [] => TY.UNIT | e::_ => #ty e)}
           end
 
       | A.AssignExp {var, exp, pos} =>
@@ -285,8 +281,10 @@ fun transExp (venv, tenv, level, e) : expty =
             val tV = #ty (trvar (venv, tenv, level, breakLabel) var)
             val tE = #ty (trexp (venv, tenv, level, breakLabel)  exp)
             val _ = requireAssignable (tV, tE, pos)
+            val v = trvar (venv, tenv, level, breakLabel) var
+            val e = trexp (venv, tenv, level, breakLabel) exp
           in
-            {exp=(), ty=TY.UNIT}
+            {exp = TR.assignExp(#exp v, #exp e), ty = TY.UNIT}
           end
 
       | A.IfExp {test, then', else', pos} =>
@@ -297,34 +295,28 @@ fun transExp (venv, tenv, level, e) : expty =
           in
             case else' of
               NONE =>
-                (requireUnit (tThen, pos); {exp=(), ty=TY.UNIT})
+                (requireUnit (tThen, pos); {exp = TR.nilExp (), ty=TY.UNIT})
             | SOME e2 =>
                 let
                   val tElse = #ty (trexp (venv, tenv, level, breakLabel)  e2)
                    in
-                      if assignable (tThen, tElse) then {exp=(), ty=actual_ty tElse}
-                      else if assignable (tElse, tThen) then {exp=(), ty=actual_ty tThen}
-                      else (ErrorMsg.error pos "then/else type mismatch"; {exp=(), ty=TY.BOTTOM})
+                      if assignable (tThen, tElse) then {exp = TR.nilExp (), ty=actual_ty tElse}
+                      else if assignable (tElse, tThen) then {exp = TR.nilExp (), ty=actual_ty tThen}
+                      else (ErrorMsg.error pos "then/else type mismatch"; {exp = TR.nilExp (), ty=TY.BOTTOM})
                     end
           end
 
       | A.WhileExp {test, body, pos} =>
-          let
-            val done = Temp.newlabel()
-            val tTest = #ty (trexp (venv, tenv, level, breakLabel)  test)
-            val _ = requireInt (tTest, pos)
-            val tBody = #ty (trexp (venv', tenv', level, breakLabel) body)
-            val _ = requireUnit (tBody, pos)
-          in
-            let
-              val done = Temp.newlabel()
-              val testE = trexp (venv, tenv, level, breakLabel) test
-              val bodyE = trexp (venv, tenv, level, SOME done) body
-            in
-              {exp = TR.whileExp(#exp testE, #exp bodyE, done),
-              ty = TY.UNIT}
-            end
-          end
+        let
+          val done = Temp.newlabel()
+          val testE = trexp (venv, tenv, level, breakLabel) test
+          val bodyE = trexp (venv, tenv, level, SOME done) body
+          val _ = requireInt (#ty testE, pos)
+          val _ = requireUnit (#ty bodyE, pos)
+        in
+          {exp = TR.whileExp(#exp testE, #exp bodyE, done),
+          ty = TY.UNIT}
+        end
 
       | A.ForExp {var, lo, hi, body, pos, ...} =>
           let
@@ -333,15 +325,16 @@ fun transExp (venv, tenv, level, e) : expty =
             val tHi = #ty (trexp (venv, tenv, level, breakLabel)  hi)
             val _ = requireInt (tLo, pos)
             val _ = requireInt (tHi, pos)
+            val iAccess = TR.allocLocal level true
 
-            val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT, readonly=true})
+
+            val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT, access = iAccess, readonly=true})
 
             (* allow break in the body *)
-            val tBody = #ty (trexp (venv', tenv, level, SOME done) body)
-
-            val _ = requireUnit (tBody, pos)
+           val bodyE = trexp (venv', tenv, level, SOME done) body
+           val _ = requireUnit (#ty bodyE, pos)
           in
-            {exp=(), ty=TY.UNIT}
+            {exp = TR.nilExp (), ty = TY.UNIT}
           end
 
       | A.BreakExp pos =>
@@ -355,9 +348,9 @@ fun transExp (venv, tenv, level, e) : expty =
     | A.LetExp {decs, body, pos} =>
         let
             val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, level, decs)
-            val tBody = #ty (trexp (venv', tenv', label, breakLabel) body)
+            val bodyE = trexp (venv', tenv', level, breakLabel) body
           in
-            {exp=(), ty=actual_ty tBody}
+            {exp = TR.nilExp (), ty=actual_ty (#ty bodyE)}
           end
 
       | A.ArrayExp {typ, size, init, pos} =>
@@ -372,11 +365,11 @@ fun transExp (venv, tenv, level, e) : expty =
                   val tInit = #ty (transExp (venv, tenv, level, init))
                   val _ = requireAssignable (elemTy, tInit, pos)
                 in
-                  {exp=(), ty=tArr}
+                  {exp = TR.nilExp (), ty=tArr}
                 end
-            | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+            | TY.BOTTOM => {exp = TR.nilExp (), ty=TY.BOTTOM}
             | _ => (ErrorMsg.error pos "array expression of non-array type";
-                    {exp=(), ty=TY.BOTTOM})
+                    {exp = TR.nilExp (), ty=TY.BOTTOM})
           end
 
     and trvar (venv: venv, tenv: tenv, level: TR.level, breakLabel: Temp.label option) (v: A.var) : expty =
@@ -394,9 +387,9 @@ fun transExp (venv, tenv, level, e) : expty =
             case actual_ty tBase of
               TY.RECORD (fields, _) =>
                 (case List.find (fn (s, _) => s = field) fields of
-                   SOME (_, fty) => {exp=(), ty=actual_ty fty}
+                   SOME (_, fty) => {exp = TR.nilExp (), ty=actual_ty fty}
                  | NONE => typeError (pos, "no such field " ^ S.name field))
-            | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+            | TY.BOTTOM => {exp = TR.nilExp (), ty=TY.BOTTOM}
             | _ => typeError (pos, "field access on non-record")
           end
 
@@ -407,8 +400,8 @@ fun transExp (venv, tenv, level, e) : expty =
             val _ = requireInt (tIdx, pos)
           in
             case actual_ty tBase of
-              TY.ARRAY (elemTy, _) => {exp=(), ty=actual_ty elemTy}
-            | TY.BOTTOM => {exp=(), ty=TY.BOTTOM}
+              TY.ARRAY (elemTy, _) => {exp = TR.nilExp (), ty=actual_ty elemTy}
+            | TY.BOTTOM => {exp = TR.nilExp (), ty=TY.BOTTOM}
             | _ => typeError (pos, "subscript on non-array")
           end
 
@@ -438,40 +431,33 @@ fun transExp (venv, tenv, level, e) : expty =
                  actual_ty tDecl
                end)
         val access = TR.allocLocal level true
-        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy, access = access readonly = false})
+        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy, access = access, readonly = false})
       in
         {venv = venv', tenv = tenv}
       end
 
-  | A.TypeDec tds =>
-      let
-        (* pass 1: enter NAME headers for all types *)
-        fun enterHeader ({name, ty, pos}: {name:A.symbol, ty:A.ty, pos:A.pos}, tenvAcc) =
-          S.enter (tenvAcc, name, TY.NAME (name, ref NONE))
-        val tenv1 = foldl enterHeader tenv tds
+ | A.TypeDec tds =>
+    let
+      fun enterHeader ({name, ty, pos}, tenvAcc) =
+        S.enter (tenvAcc, name, TY.NAME (name, ref NONE))
 
-        (* pass 2: translate RHS using tenv1, then fill the ref *)
-        fun bindBody ({name, ty, pos}: {name:A.symbol, ty:A.ty, pos:A.pos}) =
-          let
-            val rhs = transTy (tenv1, ty)
-            val r =
-              case S.look (tenv1, name) of
-                SOME (TY.NAME (_, r)) => r
-              | _ => raise Fail "TypeDec: missing header"
-            val _ = r := SOME rhs
-          in
-            ()
-          end
-        val _ = app bindBody tds
+      val tenv1 = foldl enterHeader tenv tds
 
-        fun checkOne ({name, ty, pos}: {name:A.symbol, ty:A.ty, pos:A.pos}) =
-          (case actual_ty (lookupTy (tenv1, name, pos)) of
-             TY.BOTTOM => ErrorMsg.error pos "illegal type cycle"
-           | _ => ())
-        val _ = app checkOne tds
-      in
-        {venv = venv, tenv = tenv1}
-      end
+      fun bindBody ({name, ty, pos}) =
+        let
+          val rhs = transTy (tenv1, ty)
+          val r =
+            case S.look (tenv1, name) of
+              SOME (TY.NAME (_, r)) => r
+            | _ => raise Fail "TypeDec: missing header"
+        in
+          r := SOME rhs
+        end
+
+      val _ = app bindBody tds
+    in
+      {venv = venv, tenv = tenv1}
+    end
 
   | A.FunctionDec funs =>
       let
@@ -484,44 +470,54 @@ fun transExp (venv, tenv, level, e) : expty =
           let
             val formals = map paramTy params
             val res = resultTy result
+            val label = Temp.newlabel()
+            val funLevel = TR.newLevel {parent = level, name = label, formals = map (fn _ => true) params}
           in
-            S.enter (venvAcc, name, E.FunEntry {formals = formals, result = res})
+            S.enter (venvAcc, name, E.FunEntry {level = funLevel, label = label, formals = formals, result = res})
           end
         val venv1 = foldl enterHeader venv funs
 
         (* pass 2: check bodies *)
-        fun bindParam (p: A.field, pty, v) =
-          S.enter (v, #name p, E.VarEntry {ty = pty, readonly = false})
-
-        fun checkOne ({name, params, result, body, pos}: A.fundec) =
+          fun checkOne ({name, params, result, body, pos}: A.fundec) =
             (case lookupFun (venv1, name, pos) of
               NONE => ()
-            | SOME (formals, res) =>
+            | SOME {level = funLevel, label, formals, result = res} =>
                 let
                   val _ =
                     if length params = length formals then ()
                     else ErrorMsg.error pos "wrong number of parameters"
 
+                  val formalAccesses = TR.formals funLevel
+                  fun bindParams ([], [], [], v) = v
+                  | bindParams ((param : A.field)::ps, t::ts, acc::accs, v) =
+                      let
+                        val {name, typ, pos, escape} = param
+                      in
+                        bindParams (ps, ts, accs,
+                          S.enter (v, name,
+                            E.VarEntry {ty = t, access = acc, readonly = false}))
+                      end
+                  | bindParams _ = venv1
+
                   val venvBody =
-                    if length params = length formals then
-                      ListPair.foldlEq bindParam venv1 (params, formals)
+                    if length params = length formals andalso length params = length formalAccesses then
+                      bindParams (params, formals, formalAccesses, venv1)
                     else
                       venv1
-                 
-                 val label = Temp.newlabel()
-                  val funLevel =
-                    TR.newLevel {parent = level, name = label, formals = map (fn _ => true) params}
-                  
-                  val tBody = #ty (transExp (venvBody, tenv, funLevel, body))
+
+                  val bodyE = transExp (venvBody, tenv, funLevel, body)
+
                   val _ =
                     case result of
-                      NONE => requireUnit (tBody, pos)
-                    | SOME _ => requireAssignable (res, tBody, pos)
+                      NONE => requireUnit (#ty bodyE, pos)
+                    | SOME _ => requireAssignable (res, #ty bodyE, pos)
+
+                  val _ = TR.procEntryExit (funLevel, #exp bodyE)
                 in
                   ()
                 end)
 
-        val _ = app checkOne funs
+          val _ = app checkOne funs
       in
         {venv = venv1, tenv = tenv}
       end

@@ -6,7 +6,7 @@ struct
   datatype exp =
       Ex of T.exp
     | Nx of T.stm
-    | Cx of Temp.label * Temp.label -> T.stm
+    | Cx of (Temp.label * Temp.label -> T.stm)
 
   datatype level =
       OUTERMOST
@@ -31,7 +31,6 @@ struct
 
   fun newLevel {parent, name, formals} =
     let
-      (* prepend static link *)
       val frame = F.newFrame {name = name, formals = true :: formals}
     in
       LEVEL {parent = parent, frame = frame, id = ref ()}
@@ -40,7 +39,6 @@ struct
   fun formals OUTERMOST = []
     | formals (lev as LEVEL {frame, ...}) =
         let
-          (* drop static link from user-visible formal list *)
           val fs =
             case F.formals frame of
               [] => []
@@ -53,7 +51,6 @@ struct
         raise Fail "allocLocal: cannot allocate local in outermost level"
     | allocLocal (lev as LEVEL {frame, ...}) escapes =
         (lev, F.allocLocal frame escapes)
-
 
   fun unEx (Ex e) = e
     | unEx (Nx s) = T.ESEQ (s, T.CONST 0)
@@ -87,11 +84,8 @@ struct
         end
 
   fun unCx (Cx g) = g
-    | unCx (Ex e) =
-        fn (t, f) => T.CJUMP (T.NE, e, T.CONST 0, t, f)
-    | unCx (Nx _) =
-        raise Fail "unCx on Nx"
-
+    | unCx (Ex e) = (fn (t, f) => T.CJUMP (T.NE, e, T.CONST 0, t, f))
+    | unCx (Nx _) = raise Fail "unCx on Nx"
 
   fun nilExp () = Ex (T.CONST 0)
 
@@ -105,7 +99,6 @@ struct
       Ex (T.NAME lab)
     end
 
-  (* Walk outward through static links until we reach defLevel. *)
   fun staticLink (useLevel, defParent) =
     let
       fun climb (OUTERMOST, _) = T.TEMP F.FP
@@ -114,7 +107,6 @@ struct
               T.TEMP F.FP
             else
               let
-                (* first formal is static link *)
                 val slAccess =
                   case F.formals frame of
                     sl :: _ => sl
@@ -189,7 +181,7 @@ struct
       Cx (fn (t, f) => T.CJUMP (rop, unEx left, unEx right, t, f))
     end
 
-  fun callExp {label, args, parentLevel, funLevel, curLevel} =
+  fun callExp {label, args, funLevel, curLevel} =
     let
       val sl =
         case funLevel of
@@ -197,6 +189,27 @@ struct
         | LEVEL {parent, ...} => [staticLink (curLevel, parent)]
     in
       Ex (T.CALL (T.NAME label, sl @ map unEx args))
+    end
+
+  fun breakExp done = Nx (T.JUMP (T.NAME done, [done]))
+
+  fun whileExp (test, body, done) =
+    let
+      val testLab = Temp.newlabel()
+      val bodyLab = Temp.newlabel()
+    in
+      Nx
+        (T.SEQ
+          (T.LABEL testLab,
+           T.SEQ
+             (unCx test (bodyLab, done),
+              T.SEQ
+                (T.LABEL bodyLab,
+                 T.SEQ
+                   (unNx body,
+                    T.SEQ
+                      (T.JUMP (T.NAME testLab, [testLab]),
+                       T.LABEL done))))))
     end
 
   fun procEntryExit (OUTERMOST, _) =

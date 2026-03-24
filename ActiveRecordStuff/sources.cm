@@ -6,9 +6,12 @@ table.sig
 table.sml
 symbol.sml
 types.sml
+frame.sig
 env.sml
 temp.sig
 temp.sml
+tree.sml
+translate.sml
 printtree.sml
 mipsframe.sml
 semant.sml
@@ -16,7 +19,6 @@ parse.sml
 tiger.lex
 tiger.grm
 prabsyn.sml
-translate.sml
 main.sml
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm

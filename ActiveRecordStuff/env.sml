@@ -1,9 +1,9 @@
 signature ENV = 
 sig
-    type access
-    type level
+    type access = Translate.access
+    type level = Translate.level
     type ty
-    datatype enventry = VarEntry of {ty:ty, access: access readonly: bool}
+    datatype enventry = VarEntry of {ty:ty, access: access, readonly: bool}
                     | FunEntry of {level: level, label: Temp.label, formals: ty list, result: ty}
     val base_tenv : ty Symbol.table
     val base_venv : enventry Symbol.table
@@ -11,7 +11,7 @@ end
 
 structure Env : ENV =
 struct
-  type access = unit
+  type access = Translate.access
   type level = Translate.level
   type ty = Types.ty
 
@@ -33,19 +33,17 @@ struct
   (* predifined functions aka contains the bindings of the predefined functions in the language these are defined bu the formals and the result of the FunEntry in our enventry datatype*)
   val base_venv =
   let val map : (enventry Symbol.table) = Symbol.empty
-    val predifinedFunList = [
-      (Symbol.symbol("print"),FunEntry{formals=[Types.STRING],result=Types.UNIT}),
-      (Symbol.symbol("printi"),FunEntry{formals=[Types.INT],result=Types.UNIT}),
-      (Symbol.symbol("flush"),FunEntry{formals=[],result=Types.UNIT}),
-      (Symbol.symbol("getchar"),FunEntry{formals=[],result=Types.STRING}),
-      (Symbol.symbol("ord"),FunEntry{formals=[Types.STRING],result=Types.INT}),
-      (Symbol.symbol("chr"),FunEntry{formals=[Types.INT], result=Types.STRING}),
-      (Symbol.symbol("size"),FunEntry{formals=[Types.STRING],result=Types.INT}),
-      (Symbol.symbol("substring"),FunEntry{formals=[Types.STRING,Types.INT,Types.INT], result=Types.STRING}),
-      (Symbol.symbol("concat"),FunEntry{formals=[Types.STRING,Types.STRING],result=Types.STRING}),
-      (Symbol.symbol("not"),FunEntry{formals=[Types.INT],result=Types.INT}),
-      (Symbol.symbol("exit"),FunEntry{formals=[Types.INT],result=Types.BOTTOM})
-    ]
+    val predifinedFunList = [(Symbol.symbol "print", FunEntry {level=Translate.outermost, label=Temp.namedlabel("print"), formals=[Types.STRING], result=Types.UNIT}),
+                           (Symbol.symbol "flush", FunEntry {level=Translate.outermost, label=Temp.namedlabel("flush"), formals=[], result=Types.UNIT}),
+                           (Symbol.symbol "getchar", FunEntry {level=Translate.outermost, label=Temp.namedlabel("getchar"), formals=[], result=Types.STRING}),
+                           (Symbol.symbol "ord", FunEntry {level=Translate.outermost, label=Temp.namedlabel("ord"), formals=[Types.STRING], result=Types.INT}),
+                           (Symbol.symbol "chr", FunEntry {level=Translate.outermost, label=Temp.namedlabel("chr"), formals=[Types.INT], result=Types.STRING}),
+                           (Symbol.symbol "size", FunEntry {level=Translate.outermost, label=Temp.namedlabel("size"), formals=[Types.STRING], result=Types.INT}),
+                           (Symbol.symbol "substring", FunEntry {level=Translate.outermost, label=Temp.namedlabel("substring"), formals=[Types.STRING, Types.INT, Types.INT], result=Types.STRING}),
+                           (Symbol.symbol "concat", FunEntry {level=Translate.outermost, label=Temp.namedlabel("concat"), formals=[Types.STRING, Types.STRING], result=Types.STRING}),
+                           (Symbol.symbol "not", FunEntry {level=Translate.outermost, label=Temp.namedlabel("not"), formals=[Types.INT], result=Types.INT}),
+                           (Symbol.symbol "exit", FunEntry {level=Translate.outermost, label=Temp.namedlabel("exit"), formals=[Types.INT], result=Types.UNIT})
+                           ]
     fun addToMap((sym,ty),currentMap) = Symbol.enter(currentMap,sym,ty)
   in 
   foldl addToMap map predifinedFunList
