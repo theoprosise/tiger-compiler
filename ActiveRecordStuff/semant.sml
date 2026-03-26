@@ -459,7 +459,7 @@ fun transExp (venv, tenv, level, e) : expty =
     and transDec (venv: venv, tenv: tenv, level: TR.level, d: A.dec)
     : decresult =
   case d of
-    A.VarDec {name, typ, init, pos, ...} =>
+    A.VarDec {name, typ, init, pos, escape} =>
       let
         val initE = trexp (venv, tenv, level, NONE) init
         val tInit = #ty initE
@@ -476,7 +476,7 @@ fun transExp (venv, tenv, level, e) : expty =
                in
                  actual_ty tDecl
                end)
-        val access = TR.allocLocal level true
+        val access = TR.allocLocal level (!escape)
         val venv' =
           S.enter (venv, name,
             E.VarEntry {ty = varTy, access = access, readonly = false})
@@ -522,7 +522,8 @@ fun transExp (venv, tenv, level, e) : expty =
             val formals = map paramTy params
             val res = resultTy result
             val label = Temp.newlabel()
-            val funLevel = TR.newLevel {parent = level, name = label, formals = map (fn _ => true) params}
+            val escapes = map (fn {escape, ...} => !escape) params
+            val funLevel = TR.newLevel {parent = level, name = label, formals = escapes}
           in
             S.enter (venvAcc, name, E.FunEntry {level = funLevel, label = label, formals = formals, result = res})
           end
@@ -579,6 +580,8 @@ fun transExp (venv, tenv, level, e) : expty =
 
 fun transProg ast =
   let
+    val _ = FindEscape.findEscape ast
+
     val mainLevel =
       TR.newLevel {parent = TR.outermost, name = Temp.namedlabel "tig_main", formals = []}
 

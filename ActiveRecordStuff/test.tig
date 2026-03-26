@@ -1,11 +1,10 @@
 let
-  var x := 1
   function f(a:int):int =
     let
-      function g(b:int):int = x + a + b
+      function g():int = a
     in
-      g(3)
+      g()
     end
 in
-  f(2)
+  f(3)
 end
