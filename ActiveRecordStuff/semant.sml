@@ -10,6 +10,7 @@ struct
 type venv = E.enventry S.table
 type tenv = TY.ty S.table
 type expty = {exp: TR.exp, ty: TY.ty}
+type decresult = {venv: venv, tenv: tenv, exps: TR.exp list}
 
 (*
   transVar : venv * tenv * Absyn.var -> expty
@@ -213,56 +214,69 @@ fun transExp (venv, tenv, level, e) : expty =
             | A.NeqOp    => eqNeq TR.NeqOp
           end
 
-     | A.RecordExp {fields, typ, pos} =>
-    let
-      val t = actual_ty (lookupTy (tenv, typ, pos))
-    in
-      case t of
-        TY.RECORD (fieldTys, _) =>
+      | A.RecordExp {fields, typ, pos} =>
           let
-            fun findFieldTy s =
-              case List.find (fn (n, _) => n = s) fieldTys of
-                SOME (_, ty) => ty
-              | NONE => TY.BOTTOM
-
-            val provided = map (fn (name, _, _) => name) fields
-
-            fun occurs (x, xs) = List.exists (fn y => y = x) xs
-
-            fun checkDups [] = ()
-              | checkDups (x::xs) =
-                  (if occurs (x, xs)
-                   then ErrorMsg.error pos ("duplicate field " ^ S.name x)
-                   else ();
-                   checkDups xs)
-                   
-            fun checkMissing [] = ()
-              | checkMissing ((n, _)::rest) =
-                  (if occurs (n, provided)
-                   then ()
-                   else ErrorMsg.error pos ("missing field " ^ S.name n);
-                   checkMissing rest)
-
-            fun checkOne (name, exp, fpos) =
-              let
-                val expected = findFieldTy name
-                val actual = #ty (trexp (venv, tenv, level, breakLabel)  exp)
-              in
-                if expected = TY.BOTTOM
-                then ErrorMsg.error fpos ("unknown field " ^ S.name name)
-                else requireAssignable (expected, actual, fpos)
-              end
-
-            val _ = checkDups provided
-            val _ = checkMissing fieldTys
-            val _ = app checkOne fields
+            val t = actual_ty (lookupTy (tenv, typ, pos))
           in
-            {exp = TR.nilExp (), ty = t}
+            case t of
+              TY.RECORD (fieldTys, _) =>
+                let
+                  fun findFieldTy s =
+                    case List.find (fn (n, _) => n = s) fieldTys of
+                      SOME (_, ty) => ty
+                    | NONE => TY.BOTTOM
+
+                  fun findProvidedExp s =
+                    case List.find (fn (n, _, _) => n = s) fields of
+                      SOME (_, e, _) => SOME e
+                    | NONE => NONE
+
+                  val provided = map (fn (name, _, _) => name) fields
+
+                  fun occurs (x, xs) = List.exists (fn y => y = x) xs
+
+                  fun checkDups [] = ()
+                    | checkDups (x::xs) =
+                        (if occurs (x, xs)
+                         then ErrorMsg.error pos ("duplicate field " ^ S.name x)
+                         else ();
+                         checkDups xs)
+
+                  fun checkMissing [] = ()
+                    | checkMissing ((n, _)::rest) =
+                        (if occurs (n, provided)
+                         then ()
+                         else ErrorMsg.error pos ("missing field " ^ S.name n);
+                         checkMissing rest)
+
+                  fun checkOne (name, exp, fpos) =
+                    let
+                      val expected = findFieldTy name
+                      val actual = #ty (trexp (venv, tenv, level, breakLabel) exp)
+                    in
+                      if expected = TY.BOTTOM
+                      then ErrorMsg.error fpos ("unknown field " ^ S.name name)
+                      else requireAssignable (expected, actual, fpos)
+                    end
+
+                  fun orderedFieldExps [] = []
+                    | orderedFieldExps ((name, _)::rest) =
+                        (case findProvidedExp name of
+                           SOME e => #exp (trexp (venv, tenv, level, breakLabel) e)
+                                     :: orderedFieldExps rest
+                         | NONE => orderedFieldExps rest)
+
+                  val _ = checkDups provided
+                  val _ = checkMissing fieldTys
+                  val _ = app checkOne fields
+                in
+                  {exp = TR.recordExp (orderedFieldExps fieldTys), ty = t}
+                end
+            | TY.BOTTOM => {exp = TR.nilExp (), ty = TY.BOTTOM}
+            | _ =>
+                (ErrorMsg.error pos "record expression of non-record type";
+                 {exp = TR.nilExp (), ty = TY.BOTTOM})
           end
-      | TY.BOTTOM => {exp= TR.nilExp (), ty=TY.BOTTOM}
-            | _ => (ErrorMsg.error pos "record expression of non-record type";
-           {exp = TR.nilExp (), ty=TY.BOTTOM})
-    end
 
       | A.SeqExp exps =>
           let
@@ -289,21 +303,28 @@ fun transExp (venv, tenv, level, e) : expty =
 
       | A.IfExp {test, then', else', pos} =>
           let
-            val tTest = #ty (trexp (venv, tenv, level, breakLabel)  test)
-            val _ = requireInt (tTest, pos)
-            val tThen = #ty (trexp (venv, tenv, level, breakLabel)  then')
+            val testE = trexp (venv, tenv, level, breakLabel) test
+            val thenE = trexp (venv, tenv, level, breakLabel) then'
+            val _ = requireInt (#ty testE, pos)
           in
             case else' of
               NONE =>
-                (requireUnit (tThen, pos); {exp = TR.nilExp (), ty=TY.UNIT})
+                (requireUnit (#ty thenE, pos);
+                 {exp = TR.ifExp(#exp testE, #exp thenE, NONE), ty = TY.UNIT})
             | SOME e2 =>
                 let
-                  val tElse = #ty (trexp (venv, tenv, level, breakLabel)  e2)
-                   in
-                      if assignable (tThen, tElse) then {exp = TR.nilExp (), ty=actual_ty tElse}
-                      else if assignable (tElse, tThen) then {exp = TR.nilExp (), ty=actual_ty tThen}
-                      else (ErrorMsg.error pos "then/else type mismatch"; {exp = TR.nilExp (), ty=TY.BOTTOM})
-                    end
+                  val elseE = trexp (venv, tenv, level, breakLabel) e2
+                in
+                  if assignable (#ty thenE, #ty elseE) then
+                    {exp = TR.ifExp(#exp testE, #exp thenE, SOME (#exp elseE)),
+                     ty = actual_ty (#ty elseE)}
+                  else if assignable (#ty elseE, #ty thenE) then
+                    {exp = TR.ifExp(#exp testE, #exp thenE, SOME (#exp elseE)),
+                     ty = actual_ty (#ty thenE)}
+                  else
+                    (ErrorMsg.error pos "then/else type mismatch";
+                     {exp = TR.nilExp (), ty = TY.BOTTOM})
+                end
           end
 
       | A.WhileExp {test, body, pos} =>
@@ -321,20 +342,27 @@ fun transExp (venv, tenv, level, e) : expty =
       | A.ForExp {var, lo, hi, body, pos, ...} =>
           let
             val done = Temp.newlabel()
-            val tLo = #ty (trexp (venv, tenv, level, breakLabel)  lo)
-            val tHi = #ty (trexp (venv, tenv, level, breakLabel)  hi)
-            val _ = requireInt (tLo, pos)
-            val _ = requireInt (tHi, pos)
+            val loE = trexp (venv, tenv, level, breakLabel) lo
+            val hiE = trexp (venv, tenv, level, breakLabel) hi
+            val _ = requireInt (#ty loE, pos)
+            val _ = requireInt (#ty hiE, pos)
+
             val iAccess = TR.allocLocal level true
+            val venv' =
+              S.enter (venv, var,
+                E.VarEntry {ty = TY.INT, access = iAccess, readonly = true})
 
-
-            val venv' = S.enter (venv, var, E.VarEntry{ty=TY.INT, access = iAccess, readonly=true})
-
-            (* allow break in the body *)
-           val bodyE = trexp (venv', tenv, level, SOME done) body
-           val _ = requireUnit (#ty bodyE, pos)
+            val bodyE = trexp (venv', tenv, level, SOME done) body
+            val _ = requireUnit (#ty bodyE, pos)
           in
-            {exp = TR.nilExp (), ty = TY.UNIT}
+            {exp =
+               TR.forExp
+                 {var = TR.simpleVar(iAccess, level),
+                  lo = #exp loE,
+                  hi = #exp hiE,
+                  body = #exp bodyE,
+                  done = done},
+             ty = TY.UNIT}
           end
 
       | A.BreakExp pos =>
@@ -345,13 +373,14 @@ fun transExp (venv, tenv, level, e) : expty =
                   (ErrorMsg.error pos "break not inside loop";
                     {exp = TR.nilExp (), ty = TY.UNIT}))
 
-    | A.LetExp {decs, body, pos} =>
+      | A.LetExp {decs, body, pos} =>
         let
-            val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, level, decs)
-            val bodyE = trexp (venv', tenv', level, breakLabel) body
-          in
-            {exp = TR.nilExp (), ty=actual_ty (#ty bodyE)}
-          end
+          val {venv = venv', tenv = tenv', exps = decExps} =
+            transDecs (venv, tenv, level, decs)
+          val bodyE = trexp (venv', tenv', level, breakLabel) body
+        in
+          {exp = TR.seqExp (decExps @ [#exp bodyE]), ty = actual_ty (#ty bodyE)}
+        end
 
       | A.ArrayExp {typ, size, init, pos} =>
           let
@@ -362,10 +391,11 @@ fun transExp (venv, tenv, level, e) : expty =
             case tArr of
               TY.ARRAY (elemTy, _) =>
                 let
-                  val tInit = #ty (transExp (venv, tenv, level, init))
-                  val _ = requireAssignable (elemTy, tInit, pos)
+                  val sizeE = trexp (venv, tenv, level, breakLabel) size
+                  val initE = trexp (venv, tenv, level, breakLabel) init
+                  val _ = requireAssignable (elemTy, #ty initE, pos)
                 in
-                  {exp = TR.nilExp (), ty=tArr}
+                  {exp = TR.arrayExp(#exp sizeE, #exp initE), ty = tArr}
                 end
             | TY.BOTTOM => {exp = TR.nilExp (), ty=TY.BOTTOM}
             | _ => (ErrorMsg.error pos "array expression of non-array type";
@@ -382,41 +412,57 @@ fun transExp (venv, tenv, level, e) : expty =
 
       | A.FieldVar (base, field, pos) =>
           let
-            val tBase = #ty (trvar (venv, tenv, level, breakLabel) base)
+            val baseE = trvar (venv, tenv, level, breakLabel) base
+            val tBase = #ty baseE
+
+            fun findField ([], _) = NONE
+              | findField ((s, ty)::rest, i) =
+                  if s = field then SOME(i, ty)
+                  else findField(rest, i + 1)
           in
             case actual_ty tBase of
               TY.RECORD (fields, _) =>
-                (case List.find (fn (s, _) => s = field) fields of
-                   SOME (_, fty) => {exp = TR.nilExp (), ty=actual_ty fty}
+                (case findField(fields, 0) of
+                   SOME (i, fty) =>
+                     {exp = TR.fieldVar(#exp baseE, i), ty = actual_ty fty}
                  | NONE => typeError (pos, "no such field " ^ S.name field))
-            | TY.BOTTOM => {exp = TR.nilExp (), ty=TY.BOTTOM}
+            | TY.BOTTOM => {exp = TR.nilExp (), ty = TY.BOTTOM}
             | _ => typeError (pos, "field access on non-record")
           end
 
       | A.SubscriptVar (base, idx, pos) =>
           let
-            val tBase = #ty (trvar (venv, tenv, level, breakLabel)  base)
-            val tIdx  = #ty (trexp (venv, tenv, level, breakLabel)  idx)
-            val _ = requireInt (tIdx, pos)
+            val baseE = trvar (venv, tenv, level, breakLabel) base
+            val idxE  = trexp (venv, tenv, level, breakLabel) idx
+            val _ = requireInt (#ty idxE, pos)
           in
-            case actual_ty tBase of
-              TY.ARRAY (elemTy, _) => {exp = TR.nilExp (), ty=actual_ty elemTy}
-            | TY.BOTTOM => {exp = TR.nilExp (), ty=TY.BOTTOM}
+            case actual_ty (#ty baseE) of
+              TY.ARRAY (elemTy, _) =>
+                {exp = TR.subscriptVar(#exp baseE, #exp idxE), ty = actual_ty elemTy}
+            | TY.BOTTOM => {exp = TR.nilExp (), ty = TY.BOTTOM}
             | _ => typeError (pos, "subscript on non-array")
           end
 
     and transDecs (venv: venv, tenv: tenv, level: TR.level, decs: A.dec list)
-        : {venv: venv, tenv: tenv} =
-      foldl (fn (d, {venv, tenv}) => transDec (venv, tenv, level, d))
-            {venv=venv, tenv=tenv}
-            decs
+        : decresult =
+      foldl
+        (fn (d, {venv, tenv, exps}) =>
+            let
+              val {venv = venv', tenv = tenv', exps = exps'} =
+                transDec (venv, tenv, level, d)
+            in
+              {venv = venv', tenv = tenv', exps = exps @ exps'}
+            end)
+        {venv = venv, tenv = tenv, exps = []}
+        decs
 
-   and transDec (venv: venv, tenv: tenv, level: TR.level, d: A.dec)
-    : {venv: venv, tenv: tenv} =
+    and transDec (venv: venv, tenv: tenv, level: TR.level, d: A.dec)
+    : decresult =
   case d of
     A.VarDec {name, typ, init, pos, ...} =>
       let
-        val tInit = #ty (transExp (venv, tenv, level, init))
+        val initE = trexp (venv, tenv, level, NONE) init
+        val tInit = #ty initE
         val varTy =
           (case typ of
              NONE =>
@@ -431,9 +477,14 @@ fun transExp (venv, tenv, level, e) : expty =
                  actual_ty tDecl
                end)
         val access = TR.allocLocal level true
-        val venv' = S.enter (venv, name, E.VarEntry {ty = varTy, access = access, readonly = false})
+        val venv' =
+          S.enter (venv, name,
+            E.VarEntry {ty = varTy, access = access, readonly = false})
+
+        val initMove =
+          TR.assignExp(TR.simpleVar(access, level), #exp initE)
       in
-        {venv = venv', tenv = tenv}
+        {venv = venv', tenv = tenv, exps = [initMove]}
       end
 
  | A.TypeDec tds =>
@@ -456,7 +507,7 @@ fun transExp (venv, tenv, level, e) : expty =
 
       val _ = app bindBody tds
     in
-      {venv = venv, tenv = tenv1}
+      {venv = venv, tenv = tenv1, exps = []}
     end
 
   | A.FunctionDec funs =>
@@ -519,7 +570,7 @@ fun transExp (venv, tenv, level, e) : expty =
 
           val _ = app checkOne funs
       in
-        {venv = venv1, tenv = tenv}
+        {venv = venv1, tenv = tenv, exps = []}
       end
 
   in
@@ -528,7 +579,13 @@ fun transExp (venv, tenv, level, e) : expty =
 
 fun transProg ast =
   let
-    val _ = transExp (E.base_venv, E.base_tenv, TR.outermost, ast)
+    val mainLevel =
+      TR.newLevel {parent = TR.outermost, name = Temp.namedlabel "tig_main", formals = []}
+
+    val {exp, ty} =
+      transExp (E.base_venv, E.base_tenv, mainLevel, ast)
+
+    val _ = TR.procEntryExit (mainLevel, exp)
   in
     ()
   end

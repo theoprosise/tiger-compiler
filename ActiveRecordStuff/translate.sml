@@ -167,6 +167,110 @@ struct
       Ex (T.BINOP (bop, unEx left, unEx right))
     end
 
+  fun arrayExp (size, init) =
+    Ex (T.CALL(T.NAME(Temp.namedlabel "initArray"), [unEx size, unEx init]))
+  
+  fun ifExp (test, thenE, NONE) =
+    let
+        val t = Temp.newlabel()
+        val f = Temp.newlabel()
+    in
+        Nx (
+        T.SEQ(unCx test (t, f),
+            T.SEQ(T.LABEL t,
+            T.SEQ(unNx thenE,
+                T.LABEL f))))
+    end
+    | ifExp (test, thenE, SOME elseE) =
+    let
+        val r = Temp.newtemp()
+        val t = Temp.newlabel()
+        val f = Temp.newlabel()
+        val join = Temp.newlabel()
+    in
+        Ex (
+        T.ESEQ(
+            T.SEQ(unCx test (t, f),
+            T.SEQ(T.LABEL t,
+                T.SEQ(T.MOVE(T.TEMP r, unEx thenE),
+                T.SEQ(T.JUMP(T.NAME join, [join]),
+                    T.SEQ(T.LABEL f,
+                    T.SEQ(T.MOVE(T.TEMP r, unEx elseE),
+                        T.LABEL join)))))),
+            T.TEMP r))
+    end
+
+    fun forExp {var, lo, hi, body, done} =
+        let
+        val limit = Temp.newtemp()
+        val testLab = Temp.newlabel()
+        val bodyLab = Temp.newlabel()
+
+        val varExp = unEx var
+        in
+        Nx (
+            T.SEQ(
+            T.MOVE(varExp, unEx lo),
+            T.SEQ(
+                T.MOVE(T.TEMP limit, unEx hi),
+                T.SEQ(
+                T.LABEL testLab,
+                T.SEQ(
+                    T.CJUMP(T.LE, varExp, T.TEMP limit, bodyLab, done),
+                    T.SEQ(
+                    T.LABEL bodyLab,
+                    T.SEQ(
+                        unNx body,
+                        T.SEQ(
+                        T.MOVE(varExp, T.BINOP(T.PLUS, varExp, T.CONST 1)),
+                        T.SEQ(
+                            T.JUMP(T.NAME testLab, [testLab]),
+                            T.LABEL done
+                        )
+                        )
+                    )
+                    )
+                )
+                )
+            )
+            )
+        )
+        end
+
+    fun recordExp fields =
+        let
+        val r = Temp.newtemp()
+        val n = length fields
+
+        fun buildStores ([], _) = T.EXP (T.CONST 0)
+            | buildStores (e::es, i) =
+                T.SEQ(
+                T.MOVE(
+                    T.MEM(
+                    T.BINOP(T.PLUS, T.TEMP r, T.CONST(i * F.wordSize))
+                    ),
+                    unEx e
+                ),
+                buildStores(es, i + 1)
+                )
+        in
+        Ex (
+            T.ESEQ(
+            T.SEQ(
+                T.MOVE(
+                T.TEMP r,
+                T.CALL(
+                    T.NAME(Temp.namedlabel "malloc"),
+                    [T.CONST(n * F.wordSize)]
+                )
+                ),
+                buildStores(fields, 0)
+            ),
+            T.TEMP r
+            )
+        )
+        end
+
   fun relExp (oper, left, right) =
     let
       val rop =
@@ -215,7 +319,15 @@ struct
   fun procEntryExit (OUTERMOST, _) =
         raise Fail "procEntryExit: OUTERMOST has no frame"
     | procEntryExit (LEVEL {frame, ...}, body) =
-        frags := PROC {body = unNx body, frame = frame} :: !frags
-
+        let
+            val stm =
+            case body of
+                Ex e => T.MOVE(T.TEMP F.RV, e)
+            | Nx s => s
+            | Cx _ => T.MOVE(T.TEMP F.RV, unEx body)
+        in
+            frags := PROC {body = stm, frame = frame} :: !frags
+        end
   fun getResult () = rev (!frags)
+  
 end
