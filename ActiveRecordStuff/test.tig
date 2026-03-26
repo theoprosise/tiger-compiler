@@ -1,5 +1,11 @@
 let
-  var x := 5
+  var x := 1
+  function f(a:int):int =
+    let
+      function g(b:int):int = x + a + b
+    in
+      g(3)
+    end
 in
-  x + 1
+  f(2)
 end

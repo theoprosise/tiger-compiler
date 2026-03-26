@@ -118,15 +118,32 @@ struct
       climb (useLevel, defParent)
     end
 
-  fun simpleVar ((defLevel, acc), useLevel) =
+  fun levelEq (OUTERMOST, OUTERMOST) = true
+    | levelEq (LEVEL {id=a, ...}, LEVEL {id=b, ...}) = (a = b)
+    | levelEq _ = false
+
+ 
+  fun fpAtLevel (useLevel, defLevel) =
     let
-      val fpExp =
-        case defLevel of
-          OUTERMOST => T.TEMP F.FP
-        | LEVEL {parent, ...} => staticLink (useLevel, parent)
+        fun climb (curLevel, fp) =
+        if levelEq(curLevel, defLevel) then
+            fp
+        else
+            case curLevel of
+            OUTERMOST => raise Fail "simpleVar: bad nesting"
+            | LEVEL {parent, frame, ...} =>
+                let
+                val slAcc = hd (F.formals frame)
+                val parentFP = F.exp slAcc fp
+                in
+                climb(parent, parentFP)
+                end
     in
-      Ex (F.exp acc fpExp)
+        climb(useLevel, T.TEMP F.FP)
     end
+  
+  fun simpleVar ((defLevel, acc), useLevel) =
+    Ex (F.exp acc (fpAtLevel(useLevel, defLevel)))
 
   fun fieldVar (base, fieldIndex) =
     let
@@ -329,5 +346,5 @@ struct
             frags := PROC {body = stm, frame = frame} :: !frags
         end
   fun getResult () = rev (!frags)
-  
+  fun resetResult () = frags := []
 end
