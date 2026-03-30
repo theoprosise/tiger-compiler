@@ -1,0 +1,10 @@
+let
+  function f(a:int):int =
+    let
+      function g():int = a
+    in
+      g()
+    end
+in
+  f(3)
+end
