@@ -11,6 +11,7 @@ env.sml
 temp.sig
 temp.sml
 tree.sml
+canon.sml
 translate.sml
 printtree.sml
 mipsframe.sml
@@ -20,6 +21,7 @@ parse.sml
 tiger.lex
 tiger.grm
 prabsyn.sml
+mipsgen.sml
 main.sml
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
