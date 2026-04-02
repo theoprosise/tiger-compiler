@@ -16,6 +16,19 @@ struct
       r
     end
 
+  fun relopAssem rop =
+    case rop of
+      T.EQ => "beq "
+    | T.NE => "bne "
+    | T.LT => "blt "
+    | T.GT => "bgt "
+    | T.LE => "ble "
+    | T.GE => "bge "
+    | T.ULT => "bltu "
+    | T.ULE => "bleu "
+    | T.UGT => "bgtu "
+    | T.UGE => "bgeu "
+
   fun munchStm stm =
     case stm of
       T.LABEL lab =>
@@ -25,8 +38,38 @@ struct
         emit (A.OPER {assem = "j " ^ Symbol.name lab ^ "\n",
                       dst = [], src = [], jump = SOME [lab]})
 
+    | T.CJUMP(rop, left, right, t, f) =>
+        let
+          val l = munchExp left
+          val r = munchExp right
+          val branch = relopAssem rop
+        in
+          emit (A.OPER {assem = branch ^ "`s0, `s1, `j0\n",
+                        dst = [], src = [l, r], jump = SOME [t, f]});
+          emit (A.OPER {assem = "j " ^ Symbol.name f ^ "\n",
+                        dst = [], src = [], jump = SOME [f]})
+        end
+
     | T.MOVE(T.TEMP t, T.CALL(T.NAME lab, args)) =>
         munchCall (SOME t, lab, args)
+
+    | T.MOVE(T.MEM(T.BINOP(T.PLUS, e, T.CONST k)), src) =>
+        let
+          val addr = munchExp e
+          val value = munchExp src
+        in
+          emit (A.OPER {assem = "sw `s1, " ^ Int.toString k ^ "(`s0)\n",
+                        dst = [], src = [addr, value], jump = NONE})
+        end
+
+    | T.MOVE(T.MEM e, src) =>
+        let
+          val addr = munchExp e
+          val value = munchExp src
+        in
+          emit (A.OPER {assem = "sw `s1, 0(`s0)\n",
+                        dst = [], src = [addr, value], jump = NONE})
+        end
 
     | T.MOVE(T.TEMP t, e) =>
         let val src = munchExp e
@@ -36,6 +79,12 @@ struct
 
     | T.EXP(T.CALL(T.NAME lab, args)) =>
         munchCall (NONE, lab, args)
+
+    | T.EXP(T.CONST _) =>
+        ()
+
+    | T.EXP e =>
+        ignore (munchExp e)
 
     | _ =>
         ErrorMsg.impossible "unhandled stm in munchStm"
@@ -53,6 +102,13 @@ struct
         result (fn r =>
           emit (A.OPER {assem = "la `d0, " ^ Symbol.name lab ^ "\n",
                         dst = [r], src = [], jump = NONE}))
+
+    | T.ESEQ(stm, e) =>
+        let
+          val _ = munchStm stm
+        in
+          munchExp e
+        end
 
     | T.BINOP(T.PLUS, a, T.CONST i) =>
         let val ra = munchExp a
