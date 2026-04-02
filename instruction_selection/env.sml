@@ -34,6 +34,7 @@ struct
   val base_venv =
   let val map : (enventry Symbol.table) = Symbol.empty
     val predifinedFunList = [(Symbol.symbol "print", FunEntry {level=Translate.outermost, label=Temp.namedlabel("print"), formals=[Types.STRING], result=Types.UNIT}),
+                           (Symbol.symbol("printi"), FunEntry{ level=Translate.outermost, label=Temp.namedlabel("printi"), formals=[Types.INT],result=Types.UNIT}),
                            (Symbol.symbol "flush", FunEntry {level=Translate.outermost, label=Temp.namedlabel("flush"), formals=[], result=Types.UNIT}),
                            (Symbol.symbol "getchar", FunEntry {level=Translate.outermost, label=Temp.namedlabel("getchar"), formals=[], result=Types.STRING}),
                            (Symbol.symbol "ord", FunEntry {level=Translate.outermost, label=Temp.namedlabel("ord"), formals=[Types.STRING], result=Types.INT}),
