@@ -12,9 +12,6 @@ struct
 
   val wordSize = 4
 
-  val FP = Temp.newtemp()
-  val RV = Temp.newtemp()
-
     type register = string
 
   val ZERO = Temp.newtemp()

@@ -8,6 +8,12 @@ struct
 
   fun emit i = ilist := i :: !ilist
 
+  val numArgRegs = length Frame.argregs
+
+  fun take (0, _) = []
+    | take (_, []) = []
+    | take (n, x::xs) = x :: take (n-1, xs)
+
   fun result gen =
     let
       val r = Temp.newtemp()
@@ -103,6 +109,14 @@ struct
           emit (A.OPER {assem = "la `d0, " ^ Symbol.name lab ^ "\n",
                         dst = [r], src = [], jump = NONE}))
 
+    | T.CALL(T.NAME lab, args) =>
+        let
+          val dst = Temp.newtemp()
+          val _ = munchCall (SOME dst, lab, args)
+        in
+          dst
+        end
+
     | T.ESEQ(stm, e) =>
         let
           val _ = munchStm stm
@@ -173,21 +187,43 @@ struct
     | _ =>
         ErrorMsg.impossible "unhandled exp in munchExp"
 
-  and munchArgs (_, [], n) = ()
+  and munchArgs (_, [], _) = ()
+
     | munchArgs (argreg :: regs, arg :: args, n) =
-        let val t = munchExp arg
+        let
+          val t = munchExp arg
         in
           emit (A.MOVE {assem = "move `d0, `s0\n", dst = argreg, src = t});
-          munchArgs (regs, args, n+1)
+          munchArgs (regs, args, n + 1)
         end
-    | munchArgs (_, _, _) =
-        ErrorMsg.impossible "too many args for current simple codegen"
+
+    | munchArgs ([], arg :: args, n) =
+        let
+          val t = munchExp arg
+          val offset = (n - numArgRegs) * Frame.wordSize
+        in
+          emit (A.OPER {assem = "sw `s0, " ^ Int.toString offset ^ "(`s1)\n",
+                        dst = [],
+                        src = [t, Frame.SP],
+                        jump = NONE});
+          munchArgs ([], args, n + 1)
+        end
 
   and munchCall (dstOpt, lab, args) =
     let
       val _ = munchArgs (Frame.argregs, args, 0)
-      val defs = Frame.RV :: Frame.callersaves
-      val uses = Frame.argregs
+
+      val regArgsUsed =
+        take (Int.min(length args, numArgRegs), Frame.argregs)
+
+      val uses =
+        if length args > numArgRegs then
+          regArgsUsed @ [Frame.SP]
+        else
+          regArgsUsed
+
+      val defs = Frame.RV :: Frame.RA :: Frame.callersaves
+
       val _ =
         emit (A.OPER {assem = "jal " ^ Symbol.name lab ^ "\n",
                       dst = defs, src = uses, jump = SOME [lab]})

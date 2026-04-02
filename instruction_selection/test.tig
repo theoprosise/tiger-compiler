@@ -1,10 +1,10 @@
 let
-  function f(a:int):int =
+  function outer(x:int):int =
     let
-      function g():int = a
+      function inner(a:int,b:int,c:int,d:int,e:int):int = e + x
     in
-      g()
+      inner(1,2,3,4,50)
     end
 in
-  f(3)
+  outer(10)
 end
