@@ -6,6 +6,7 @@ table.sig
 table.sml
 symbol.sml
 types.sml
+assem.sml
 frame.sig
 env.sml
 temp.sig
@@ -15,6 +16,7 @@ canon.sml
 translate.sml
 printtree.sml
 mipsframe.sml
+codegen.sig
 findescape.sml
 semant.sml
 parse.sml

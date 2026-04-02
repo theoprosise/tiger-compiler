@@ -25,6 +25,9 @@ struct
         emit (A.OPER {assem = "j " ^ Symbol.name lab ^ "\n",
                       dst = [], src = [], jump = SOME [lab]})
 
+    | T.MOVE(T.TEMP t, T.CALL(T.NAME lab, args)) =>
+        munchCall (SOME t, lab, args)
+
     | T.MOVE(T.TEMP t, e) =>
         let val src = munchExp e
         in
@@ -33,9 +36,6 @@ struct
 
     | T.EXP(T.CALL(T.NAME lab, args)) =>
         munchCall (NONE, lab, args)
-
-    | T.MOVE(T.TEMP t, T.CALL(T.NAME lab, args)) =>
-        munchCall (SOME t, lab, args)
 
     | _ =>
         ErrorMsg.impossible "unhandled stm in munchStm"
@@ -71,6 +71,33 @@ struct
                           dst = [r], src = [ra, rb], jump = NONE}))
         end
 
+    | T.BINOP(T.MINUS, a, b) =>
+        let val ra = munchExp a
+            val rb = munchExp b
+        in
+          result (fn r =>
+            emit (A.OPER {assem = "sub `d0, `s0, `s1\n",
+                          dst = [r], src = [ra, rb], jump = NONE}))
+        end
+
+    | T.BINOP(T.MUL, a, b) =>
+        let val ra = munchExp a
+            val rb = munchExp b
+        in
+          result (fn r =>
+            emit (A.OPER {assem = "mul `d0, `s0, `s1\n",
+                          dst = [r], src = [ra, rb], jump = NONE}))
+        end
+
+    | T.BINOP(T.DIV, a, b) =>
+        let val ra = munchExp a
+            val rb = munchExp b
+        in
+          result (fn r =>
+            emit (A.OPER {assem = "div `d0, `s0, `s1\n",
+                          dst = [r], src = [ra, rb], jump = NONE}))
+        end
+
     | T.MEM(T.BINOP(T.PLUS, e, T.CONST k)) =>
         let val re = munchExp e
         in
@@ -90,7 +117,7 @@ struct
     | _ =>
         ErrorMsg.impossible "unhandled exp in munchExp"
 
-  and munchArgs ([], [], n) = ()
+  and munchArgs (_, [], n) = ()
     | munchArgs (argreg :: regs, arg :: args, n) =
         let val t = munchExp arg
         in
@@ -111,7 +138,11 @@ struct
     in
       case dstOpt of
         NONE => ()
-      | SOME t => emit (A.MOVE {assem = "move `d0, `s0\n", dst = t, src = Frame.RV})
+      | SOME t =>
+          if t = Frame.RV then
+            ()
+          else
+            emit (A.MOVE {assem = "move `d0, `s0\n", dst = t, src = Frame.RV})
     end
 
   fun codegen frame stm =

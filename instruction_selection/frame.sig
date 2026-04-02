@@ -8,6 +8,8 @@ sig
 
   val FP : Temp.temp
   val RV : Temp.temp
+  val argregs : Temp.temp list
+  val callersaves : Temp.temp list
 
   val newFrame : {name: Temp.label, formals: bool list} -> frame
   val name : frame -> Temp.label

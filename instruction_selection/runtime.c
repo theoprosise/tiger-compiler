@@ -32,6 +32,31 @@ void print(struct string *s)
  for(i=0;i<s->length;i++,p++) putchar(*p);
 }
 
+void printi(int x)
+{
+    if (x == 0) {
+        putchar('0');
+        return;
+    }
+
+    if (x < 0) {
+        putchar('-');
+        x = -x;
+    }
+
+    char buf[20]; 
+    int i = 0;
+
+    while (x > 0) {
+        buf[i++] = '0' + (x % 10);
+        x /= 10;
+    }
+    
+    while (i > 0) {
+        putchar(buf[--i]);
+    }
+}
+
 void flush()
 {
  fflush(stdout);

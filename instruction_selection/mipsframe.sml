@@ -122,6 +122,9 @@ struct
     | InReg t =>
         Tree.TEMP t
 
+  fun string (lab, s) =
+    Symbol.name lab ^ ":\t.asciiz\t\"" ^ String.toString s ^ "\"\n"
+
   fun procEntryExit2 (frame, body) =
     body @
     [Assem.OPER
