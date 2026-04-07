@@ -1,0 +1,10 @@
+let
+  function outer(x:int):int =
+    let
+      function inner(a:int,b:int,c:int,d:int,e:int):int = e + x
+    in
+      inner(1,2,3,4,50)
+    end
+in
+  outer(10)
+end
