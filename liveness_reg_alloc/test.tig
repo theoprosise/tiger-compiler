@@ -1,10 +1,19 @@
 let
-  function outer(x:int):int =
+  function f(a:int, b:int, c:int, d:int, e:int, f:int, g:int, h:int) : int =
     let
-      function inner(a:int,b:int,c:int,d:int,e:int):int = e + x
+      var x1 := a + b
+      var x2 := c + d
+      var x3 := e + f
+      var x4 := g + h
+      var x5 := x1 + x2
+      var x6 := x3 + x4
+      var x7 := x5 + x6
+      var x8 := x7 + a + c + e + g
+      var x9 := x8 + b + d + f + h
+      var x10 := x9 + x1 + x2 + x3 + x4
     in
-      inner(1,2,3,4,50)
+      x10
     end
 in
-  outer(10)
+  printi(f(1,2,3,4,5,6,7,8))
 end

@@ -5,26 +5,32 @@ structure Main = struct
 
    fun getsome (SOME x) = x
 
+   fun tempName allocation t =
+     case Temp.Table.look (allocation, t) of
+       SOME regtemp =>
+         (case Temp.Table.look (F.tempMap, regtemp) of
+            SOME name => name
+          | NONE => Temp.makestring regtemp)
+     | NONE =>
+         (case Temp.Table.look (F.tempMap, t) of
+            SOME name => name
+          | NONE => Temp.makestring t)
+
    fun emitproc out (Tr.PROC{body,frame}) =
      let
          val _ = print ("emit " ^ Symbol.name (F.name frame) ^ "\n")
-(*       val _ = Printtree.printtree(out,body); *)
 
          val stms = Canon.linearize body
-(*       val _ = app (fn s => Printtree.printtree(out,s)) stms; *)
-
          val stms' = Canon.traceSchedule (Canon.basicBlocks stms)
          val instrs = List.concat (map (Mips.codegen frame) stms')
-         val format0 = Assem.format (Temp.makestring)
 
-         val (fg, _) = Flow.instrs2graph instrs
-         val ig = Liveness.interferenceGraph fg
+         val {instrs = finalInstrs, allocation = allocation} =
+             RegAlloc.alloc (instrs, frame)
 
-         val _ = TextIO.output(out, "\n# ---- liveness ----\n")
-         val _ = Liveness.show(out, fg)
-         val _ = TextIO.output(out, "# ---- assembly ----\n")
+         val format0 = Assem.format (tempName allocation)
+
       in
-         app (fn i => TextIO.output(out, format0 i)) instrs
+         app (fn i => TextIO.output(out, format0 i)) finalInstrs
      end
      | emitproc out (Tr.STRING(lab,s)) =
          TextIO.output(out, F.string(lab,s))

@@ -13,6 +13,8 @@ sig
   val argregs : Temp.temp list
   val callersaves : Temp.temp list
   val calleesaves : Temp.temp list
+  val registers : Temp.temp list
+
 
   val newFrame : {name: Temp.label, formals: bool list} -> frame
   val name : frame -> Temp.label

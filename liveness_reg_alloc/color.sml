@@ -8,7 +8,7 @@ struct
     | NONE => NONE
 
   fun memberNode (x, []) = false
-    | memberNode (x, y :: ys) = (x = y) orelse memberNode (x, ys)
+  | memberNode (x, y :: ys) = Graph.eq (x, y) orelse memberNode (x, ys)
 
   fun memberTemp (x, []) = false
     | memberTemp (x, y :: ys) = (x = y) orelse memberTemp (x, ys)
