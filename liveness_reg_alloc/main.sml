@@ -1,23 +1,53 @@
-signature GRAPH =
-sig
-    type graph
-    type node
-    
-    val nodes: graph -> node list
-    val succ: node -> node list
-    val pred: node -> node list
-    val adj: node -> node list   (* succ+pred *)
-    val eq: node*node -> bool
+structure Main = struct
 
-    val newGraph: unit -> graph
-    val newNode : graph -> node
-    exception GraphEdge
-    val mk_edge: {from: node, to: node} -> unit
-    val rm_edge: {from: node, to: node} -> unit
+   structure Tr = Translate
+   structure F = MipsFrame
 
-    structure Table : TABLE 
-    sharing type Table.key = node
+   fun getsome (SOME x) = x
 
-    val nodename: node->string  (* for debugging only *)
+   fun emitproc out (Tr.PROC{body,frame}) =
+     let
+         val _ = print ("emit " ^ Symbol.name (F.name frame) ^ "\n")
+(*       val _ = Printtree.printtree(out,body); *)
+
+         val stms = Canon.linearize body
+(*       val _ = app (fn s => Printtree.printtree(out,s)) stms; *)
+
+         val stms' = Canon.traceSchedule (Canon.basicBlocks stms)
+         val instrs = List.concat (map (Mips.codegen frame) stms')
+         val format0 = Assem.format (Temp.makestring)
+
+         val (fg, _) = Flow.instrs2graph instrs
+         val ig = Liveness.interferenceGraph fg
+
+         val _ = TextIO.output(out, "\n# ---- liveness ----\n")
+         val _ = Liveness.show(out, fg)
+         val _ = TextIO.output(out, "# ---- assembly ----\n")
+      in
+         app (fn i => TextIO.output(out, format0 i)) instrs
+     end
+     | emitproc out (Tr.STRING(lab,s)) =
+         TextIO.output(out, F.string(lab,s))
+
+   fun withOpenFile fname f =
+       let
+           val out = TextIO.openOut fname
+       in
+           (f out before TextIO.closeOut out)
+           handle e => (TextIO.closeOut out; raise e)
+       end
+
+   fun compile filename =
+       let
+           val absyn = Parse.parse filename
+           val _ = Tr.resetResult ()
+           val _ = Semant.transProg absyn
+           val frags = Tr.getResult ()
+       in
+           withOpenFile (filename ^ ".s")
+             (fn out => app (emitproc out) frags)
+       end
+
+   fun main filename = compile filename
 
 end

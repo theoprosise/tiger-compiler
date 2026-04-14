@@ -16,6 +16,8 @@ graph.sig
 graph.sml
 flowgraph.sml
 liveness.sml
+color.sml
+regalloc.sml
 canon.sml
 translate.sml
 printtree.sml
