@@ -60,11 +60,8 @@ struct
                   Symbol.empty
                   nodeInstrs
 
-            fun lookupLabel lab =
-                case Symbol.look (labelMap, lab) of
-                    SOME n => n
-                  | NONE => ErrorMsg.impossible ("unknown label in flowgraph: " ^ Symbol.name lab)
-
+            fun lookupLabel lab = Symbol.look (labelMap, lab)
+                 
             (* build tables *)
 
             val defTable =
@@ -94,14 +91,22 @@ struct
                   | addFlowEdges [(n, instr)] =
                         (case instr of
                               Assem.OPER {jump = SOME labs, ...} =>
-                              app (fn lab => addEdge (n, lookupLabel lab)) labs
+                             app (fn lab =>
+                                    case lookupLabel lab of
+                                          SOME target => addEdge (n, target)
+                                    | NONE => ())
+                              labs
                         | _ => ())
                   | addFlowEdges ((n1, instr1) :: rest) =
                         let
                               val _ =
                               case instr1 of
                                     Assem.OPER {jump = SOME labs, ...} =>
-                                          app (fn lab => addEdge (n1, lookupLabel lab)) labs
+                                          app (fn lab =>
+                                                case lookupLabel lab of
+                                                      SOME target => addEdge (n1, target)
+                                                | NONE => ())
+                                          labs
                                     | _ =>
                                           (case rest of
                                           (n2, _) :: _ => addEdge (n1, n2)
