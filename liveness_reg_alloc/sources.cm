@@ -1,4 +1,4 @@
-Group is 
+Group is
 
 absyn.sml
 errormsg.sml
@@ -12,6 +12,10 @@ env.sml
 temp.sig
 temp.sml
 tree.sml
+graph.sig
+graph.sml
+flowgraph.sml
+liveness.sml
 canon.sml
 translate.sml
 printtree.sml

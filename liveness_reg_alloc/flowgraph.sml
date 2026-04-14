@@ -29,8 +29,6 @@ struct
             (* pair each node with its instruction *)
             val nodeInstrs = ListPair.zip (nodes, instrs)
 
-            (* ---------- helpers ---------- *)
-
             fun addEdge (from, to) =
                 Graph.mk_edge {from = from, to = to}
                 handle Graph.GraphEdge => ()
@@ -67,7 +65,7 @@ struct
                     SOME n => n
                   | NONE => ErrorMsg.impossible ("unknown label in flowgraph: " ^ Symbol.name lab)
 
-            (* ---------- build tables ---------- *)
+            (* build tables *)
 
             val defTable =
                 foldl
@@ -90,25 +88,27 @@ struct
                   Graph.Table.empty
                   nodeInstrs
 
-            (* ---------- add control-flow edges ---------- *)
+            (* add control-flow edges *)
 
             fun addFlowEdges [] = ()
-              | addFlowEdges [(n, instr)] =
-                    (case instr of
-                        Assem.OPER {jump = SOME labs, ...} =>
-                            app (fn lab => addEdge (n, lookupLabel lab)) labs
-                      | _ => ())
-              | addFlowEdges ((n1, instr1) :: rest as (n2, _) :: _) =
-                    let
-                        val _ =
-                            case instr1 of
-                                Assem.OPER {jump = SOME labs, ...} =>
-                                    app (fn lab => addEdge (n1, lookupLabel lab)) labs
-                              | _ =>
-                                    addEdge (n1, n2)
-                    in
-                        addFlowEdges rest
-                    end
+                  | addFlowEdges [(n, instr)] =
+                        (case instr of
+                              Assem.OPER {jump = SOME labs, ...} =>
+                              app (fn lab => addEdge (n, lookupLabel lab)) labs
+                        | _ => ())
+                  | addFlowEdges ((n1, instr1) :: rest) =
+                        let
+                              val _ =
+                              case instr1 of
+                                    Assem.OPER {jump = SOME labs, ...} =>
+                                          app (fn lab => addEdge (n1, lookupLabel lab)) labs
+                                    | _ =>
+                                          (case rest of
+                                          (n2, _) :: _ => addEdge (n1, n2)
+                                          | [] => ())
+                        in
+                              addFlowEdges rest
+                        end
 
             val _ = addFlowEdges nodeInstrs
 
