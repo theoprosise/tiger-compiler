@@ -2,24 +2,37 @@ structure RegAlloc =
 struct
   structure F = MipsFrame
 
+  fun sameColor allocation (t1, t2) =
+    case (Temp.Table.look (allocation, t1), Temp.Table.look (allocation, t2)) of
+      (SOME r1, SOME r2) => (r1 = r2)
+    | _ => false
+
+  fun removeUselessMoves (instrs, allocation) =
+    List.filter
+      (fn instr =>
+          case instr of
+            Assem.MOVE {dst, src, ...} => not (sameColor allocation (dst, src))
+          | _ => true)
+      instrs
+
+  fun addPrecolored (regs, tbl) =
+    foldl (fn (r, acc) => Temp.Table.enter (acc, r, r)) tbl regs
+
   fun alloc (instrs, frame) =
     let
-      (* build flowgraph *)
       val (fg, _) = Flow.instrs2graph instrs
-
-      (* build interference graph *)
       val ig = Liveness.interferenceGraph fg
 
-      (* machine registers (temps) *)
+      (* registers allocator may assign *)
       val registers = F.registers
 
-      (* initial coloring: registers map to themselves *)
-      val initial =
-        foldl (fn (r, tbl) => Temp.Table.enter (tbl, r, r))
-              Temp.Table.empty
-              registers
+      (* machine registers with fixed identities *)
+      val precolored =
+        F.registers @ F.argregs @ [F.FP, F.SP, F.RA, F.RV]
 
-      (* simple spill cost *)
+      val initial =
+        addPrecolored (precolored, Temp.Table.empty)
+
       fun spillCost n = 1
 
       val {allocation, spills} =
@@ -36,8 +49,8 @@ struct
         else
           print ("Spills: " ^ Int.toString (length spills) ^ "\n")
 
+      val cleanedInstrs = removeUselessMoves (instrs, allocation)
     in
-      (* for now, return original instrs *)
-      {instrs = instrs, allocation = allocation}
+      {instrs = cleanedInstrs, allocation = allocation}
     end
 end
