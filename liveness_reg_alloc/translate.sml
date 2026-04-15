@@ -337,13 +337,14 @@ struct
         raise Fail "procEntryExit: OUTERMOST has no frame"
     | procEntryExit (LEVEL {frame, ...}, body) =
         let
-            val stm =
-            case body of
-                Ex e => T.MOVE(T.TEMP F.RV, e)
-            | Nx s => s
-            | Cx _ => T.MOVE(T.TEMP F.RV, unEx body)
+            val core =
+              case body of
+                  Ex e => T.MOVE(T.TEMP F.RV, e)
+              | Nx s => s
+              | Cx _ => T.MOVE(T.TEMP F.RV, unEx body)
+            val stm = F.procEntryExit1 (frame, core)
         in
-            frags := PROC {body = stm, frame = frame} :: !frags
+            frags := PROC {body = T.SEQ (T.LABEL (F.name frame), stm), frame = frame} :: !frags
         end
   fun getResult () = rev (!frags)
   fun resetResult () = frags := []

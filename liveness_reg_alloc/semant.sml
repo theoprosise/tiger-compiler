@@ -583,7 +583,7 @@ fun transProg ast =
     val _ = FindEscape.findEscape ast
 
     val mainLevel =
-      TR.newLevel {parent = TR.outermost, name = Temp.namedlabel "tig_main", formals = []}
+      TR.newLevel {parent = TR.outermost, name = Temp.namedlabel "tigermain", formals = []}
 
     val {exp, ty} =
       transExp (E.base_venv, E.base_tenv, mainLevel, ast)

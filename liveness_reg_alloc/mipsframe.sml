@@ -8,6 +8,7 @@ struct
     { name    : Temp.label
     , formals : access list
     , locals  : int ref
+    , outgoing : int ref
     }
 
   val wordSize = 4
@@ -49,6 +50,8 @@ struct
   val callersaves = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
   val specialregs = [ZERO, RV, SP, FP, RA]
   val registers = callersaves @ calleesaves
+  val savedRegs = RA :: FP :: calleesaves
+  val saveAreaSize = length savedRegs * wordSize
   
   val tempMap =
     let
@@ -83,6 +86,11 @@ struct
     in
       t
     end
+
+  fun regName r =
+    case Temp.Table.look (tempMap, r) of
+      SOME name => name
+    | NONE => ErrorMsg.impossible "missing register name"
   
   fun name ({name, ...} : frame) = name
   fun formals ({formals, ...} : frame) = formals
@@ -99,6 +107,7 @@ struct
       { name = name
       , formals = build (formals, 0, [])
       , locals = ref 0
+      , outgoing = ref 0
       }
     end
 
@@ -108,10 +117,16 @@ struct
         val i = !locals + 1
         val _ = locals := i
       in
-        InFrame (~i * wordSize)
+        InFrame (~(saveAreaSize + i * wordSize))
       end
     else
       InReg (Temp.newtemp())
+
+  fun reserveOutgoing ({outgoing, ...} : frame) count =
+    if count > !outgoing then
+      outgoing := count
+    else
+      ()
 
   fun exp access framePtr =
     case access of
@@ -121,21 +136,99 @@ struct
         Tree.TEMP t
 
   fun string (lab, s) =
-    Symbol.name lab ^ ":\t.asciiz\t\"" ^ String.toString s ^ "\"\n"
+    let
+      fun byteLines [] = ""
+        | byteLines (c :: cs) =
+            ".byte " ^ Int.toString (Char.ord c) ^ "\n" ^ byteLines cs
+    in
+      ".align 2\n"
+      ^ Symbol.name lab ^ ":\n"
+      ^ ".word " ^ Int.toString (String.size s) ^ "\n"
+      ^ byteLines (String.explode s)
+      ^ ".align 2\n"
+    end
+
+  fun seq [] = Tree.EXP (Tree.CONST 0)
+    | seq [s] = s
+    | seq (s :: ss) = Tree.SEQ (s, seq ss)
+
+  fun procEntryExit1 (frame : frame, body) =
+    let
+      val formals = formals frame
+
+      fun incomingFormal n =
+        if n < length argregs then
+          Tree.TEMP (List.nth (argregs, n))
+        else
+          Tree.MEM
+            (Tree.BINOP
+              (Tree.PLUS,
+               Tree.TEMP FP,
+               Tree.CONST (n * wordSize)))
+
+      fun moveFormal (access, n) =
+        Tree.MOVE (exp access (Tree.TEMP FP), incomingFormal n)
+
+      val moves = ListPair.map moveFormal (formals, List.tabulate (length formals, fn i => i))
+    in
+      Tree.SEQ (seq moves, body)
+    end
 
   fun procEntryExit2 (frame, body) =
     body @
     [Assem.OPER
       { assem = ""
-      , src = [ZERO, RA, SP] @ calleesaves
+      , src = [ZERO, RA, SP, FP] @ calleesaves
       , dst = []
       , jump = SOME []
       }]
   
-  fun procEntryExit3 ({name, ...} : frame, body) =
-    { prolog = "PROCEDURE " ^ Symbol.name name ^ "\n"
+  fun asmInt i =
+    if i < 0 then
+      "-" ^ Int.toString (~i)
+    else
+      Int.toString i
+
+  fun frameSize ({locals, outgoing, ...} : frame) =
+    saveAreaSize + (!locals * wordSize) + (!outgoing * wordSize)
+
+  fun procEntryExit3 (frame as {name, ...} : frame, body) =
+    let
+      val size = frameSize frame
+      val raOffset = size - wordSize
+      val fpOffset = size - (2 * wordSize)
+      val calleeOffsets =
+        List.tabulate (length calleesaves, fn i => size - ((i + 3) * wordSize))
+
+      fun saveLine (regName, offset) =
+        "sw " ^ regName ^ ", " ^ asmInt offset ^ "($sp)\n"
+
+      fun restoreLine (regName, offset) =
+        "lw " ^ regName ^ ", " ^ asmInt offset ^ "($sp)\n"
+
+      val calleeSaveLines =
+        String.concat (ListPair.map saveLine (map regName calleesaves, calleeOffsets))
+
+      val calleeRestoreLines =
+        String.concat (ListPair.map restoreLine (map regName calleesaves, calleeOffsets))
+    in
+    { prolog =
+        "addiu $sp, $sp, -" ^ asmInt size ^ "\n"
+        ^ saveLine ("$ra", raOffset)
+        ^ saveLine ("$fp", fpOffset)
+        ^ calleeSaveLines
+        ^ "addiu $fp, $sp, " ^ asmInt size ^ "\n"
     , body = body
-    , epilog = "END " ^ Symbol.name name ^ "\n"
+    , epilog =
+        "move $sp, $fp\n"
+        ^ "addiu $sp, $sp, -" ^ asmInt size ^ "\n"
+        ^ restoreLine ("$ra", raOffset)
+        ^ restoreLine ("$fp", fpOffset)
+        ^ calleeRestoreLines
+        ^ "addiu $sp, $sp, " ^ asmInt size ^ "\n"
+        ^ "jr $ra\n"
+        ^ "nop\n"
     }
+    end
     
 end

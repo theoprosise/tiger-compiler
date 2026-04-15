@@ -5,8 +5,15 @@ struct
   structure Frame = MipsFrame
 
   val ilist = ref ([] : A.instr list)
+  val currentFrame = ref (NONE : Frame.frame option)
 
   fun emit i = ilist := i :: !ilist
+
+  fun asmInt i =
+    if i < 0 then
+      "-" ^ Int.toString (~i)
+    else
+      Int.toString i
 
   val numArgRegs = length Frame.argregs
 
@@ -64,7 +71,7 @@ struct
           val addr = munchExp e
           val value = munchExp src
         in
-          emit (A.OPER {assem = "sw `s1, " ^ Int.toString k ^ "(`s0)\n",
+          emit (A.OPER {assem = "sw `s1, " ^ asmInt k ^ "(`s0)\n",
                         dst = [], src = [addr, value], jump = NONE})
         end
 
@@ -99,7 +106,7 @@ struct
     case exp of
       T.CONST i =>
         result (fn r =>
-          emit (A.OPER {assem = "li `d0, " ^ Int.toString i ^ "\n",
+          emit (A.OPER {assem = "li `d0, " ^ asmInt i ^ "\n",
                         dst = [r], src = [], jump = NONE}))
 
     | T.TEMP t => t
@@ -128,7 +135,7 @@ struct
         let val ra = munchExp a
         in
           result (fn r =>
-            emit (A.OPER {assem = "addi `d0, `s0, " ^ Int.toString i ^ "\n",
+            emit (A.OPER {assem = "addi `d0, `s0, " ^ asmInt i ^ "\n",
                           dst = [r], src = [ra], jump = NONE}))
         end
 
@@ -172,7 +179,7 @@ struct
         let val re = munchExp e
         in
           result (fn r =>
-            emit (A.OPER {assem = "lw `d0, " ^ Int.toString k ^ "(`s0)\n",
+            emit (A.OPER {assem = "lw `d0, " ^ asmInt k ^ "(`s0)\n",
                           dst = [r], src = [re], jump = NONE}))
         end
 
@@ -192,7 +199,12 @@ struct
     | munchArgs (argreg :: regs, arg :: args, n) =
         let
           val t = munchExp arg
+          val offset = n * Frame.wordSize
         in
+          emit (A.OPER {assem = "sw `s0, " ^ asmInt offset ^ "(`s1)\n",
+                        dst = [],
+                        src = [t, Frame.SP],
+                        jump = NONE});
           emit (A.MOVE {assem = "move `d0, `s0\n", dst = argreg, src = t});
           munchArgs (regs, args, n + 1)
         end
@@ -200,9 +212,9 @@ struct
     | munchArgs ([], arg :: args, n) =
         let
           val t = munchExp arg
-          val offset = (n - numArgRegs) * Frame.wordSize
+          val offset = n * Frame.wordSize
         in
-          emit (A.OPER {assem = "sw `s0, " ^ Int.toString offset ^ "(`s1)\n",
+          emit (A.OPER {assem = "sw `s0, " ^ asmInt offset ^ "(`s1)\n",
                         dst = [],
                         src = [t, Frame.SP],
                         jump = NONE});
@@ -211,13 +223,17 @@ struct
 
   and munchCall (dstOpt, lab, args) =
     let
+      val _ =
+        case !currentFrame of
+          SOME frame => Frame.reserveOutgoing frame (length args)
+        | NONE => ErrorMsg.impossible "munchCall without current frame"
       val _ = munchArgs (Frame.argregs, args, 0)
 
       val regArgsUsed =
         take (Int.min(length args, numArgRegs), Frame.argregs)
 
       val uses =
-        if length args > numArgRegs then
+        if length args > 0 then
           regArgsUsed @ [Frame.SP]
         else
           regArgsUsed
@@ -239,6 +255,7 @@ struct
 
   fun codegen frame stm =
     (ilist := [];
+     currentFrame := SOME frame;
      munchStm stm;
      rev (!ilist))
 end
