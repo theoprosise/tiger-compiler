@@ -1,0 +1,6 @@
+let
+  type pair = {x:int, y:int}
+  var p := pair{x=1, y=2}
+in
+  p.x + p.y
+end

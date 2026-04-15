@@ -1,0 +1,9 @@
+let
+  var i := 0
+  var sum := 0
+in
+  (while i < 4 do
+     (sum := sum + i;
+      i := i + 1);
+   sum)
+end

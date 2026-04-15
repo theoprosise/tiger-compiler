@@ -1,0 +1,6 @@
+let
+  type intArray = array of int
+  var a := intArray[3] of 5
+in
+  a[0] + a[1] + a[2]
+end

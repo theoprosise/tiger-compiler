@@ -1,0 +1,5 @@
+let
+  var s := "hi"
+in
+  0
+end
