@@ -242,7 +242,7 @@ struct
 
       val _ =
         emit (A.OPER {assem = "jal " ^ Symbol.name lab ^ "\n",
-                      dst = defs, src = uses, jump = SOME [lab]})
+                      dst = defs, src = uses, jump = NONE})
     in
       case dstOpt of
         NONE => ()

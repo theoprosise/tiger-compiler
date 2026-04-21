@@ -119,7 +119,7 @@ struct
           if Graph.eq (ru, rv) then ()
           else if adjacentRep (ru, rv) then ()
           else if isPrecolored (initial, tu) andalso isPrecolored (initial, tv) then ()
-          else if conservative (ru, rv) then union (ru, rv)
+          else if conservative (ru, rv) then  if isPrecolored (initial, tv) then union (rv, ru) else union (ru, rv)
           else ()
         end
 
